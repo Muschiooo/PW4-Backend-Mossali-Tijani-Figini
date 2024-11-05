@@ -22,8 +22,8 @@ public class UserService {
         response.setName(user.getName());
         response.setEmail(user.getEmail());
         response.setPhoneNumber(user.getPhoneNumber());
-        response.setOrders(user.getOrders());
-        response.setComments(user.getComments());
+        response.setRole(user.getRole());
+        response.setVerification(user.getVerification());
         return response;
     }
 

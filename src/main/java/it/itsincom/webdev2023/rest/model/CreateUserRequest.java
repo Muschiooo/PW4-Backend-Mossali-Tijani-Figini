@@ -11,8 +11,9 @@ public class CreateUserRequest {
     private String password;
     private String email;
     private String phoneNumber;
-    private List<Order> orders;
-    private List<Comment> comments;
+    private String role;
+
+    private String verification;
 
     public int getId() {
         return id;
@@ -54,19 +55,19 @@ public class CreateUserRequest {
         this.phoneNumber = phoneNumber;
     }
 
-    public List<Order> getOrders() {
-        return orders;
+    public String getRole() {
+        return role;
     }
 
-    public void setOrders(List<Order> orders) {
-        this.orders = orders;
+    public void setRole(String role) {
+        this.role = role;
     }
 
-    public List<Comment> getComments() {
-        return comments;
+    public String getVerification() {
+        return verification;
     }
 
-    public void setComments(List<Comment> comments) {
-        this.comments = comments;
+    public void setVerification(String verification) {
+        this.verification = verification;
     }
 }

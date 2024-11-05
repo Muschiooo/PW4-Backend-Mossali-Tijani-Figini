@@ -21,11 +21,14 @@ public class UserRepository {
 
     public User createUser(User user) {
         try (Connection connection = dataSource.getConnection()) {
-            String sql = "INSERT INTO user (name, email, password) VALUES (?, ?, ?)";
+            String sql = "INSERT INTO user (name, email, password, phone, role, verification) VALUES (?, ?, ?, ?, ?, ?)";
             try (PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 statement.setString(1, user.getName());
                 statement.setString(2, user.getEmail());
                 statement.setString(3, user.getPasswordHash());
+                statement.setString(4, user.getPhoneNumber());
+                statement.setString(5, "client");
+                statement.setString(6, "pending");
 
                 int affectedRows = statement.executeUpdate();
                 if (affectedRows == 0) {
@@ -48,7 +51,7 @@ public class UserRepository {
 
     public Optional<User> findByCredentials(String email, String hash) {
         try (Connection connection = dataSource.getConnection()) {
-            String sql = "SELECT id, name, email, password FROM user WHERE email = ? AND password = ?";
+            String sql = "SELECT id, name, email, password, phone, role, verification FROM user WHERE email = ? AND password = ?";
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setString(1, email);
                 statement.setString(2, hash);
@@ -59,6 +62,9 @@ public class UserRepository {
                         user.setName(resultSet.getString("name"));
                         user.setEmail(resultSet.getString("email"));
                         user.setPasswordHash(resultSet.getString("password"));
+                        user.setPhoneNumber(resultSet.getString("phone"));
+                        user.setRole(resultSet.getString("role"));
+                        user.setVerification(resultSet.getString("verification"));
                         return Optional.of(user);
                     }
                 }
@@ -71,7 +77,7 @@ public class UserRepository {
 
     public User getUserById(int userId) throws SQLException {
         User user = null;
-        String sql = "SELECT id, name, email, password FROM user WHERE id = ?";
+        String sql = "SELECT id, name, email, password, phone, role, verification FROM user WHERE id = ?";
 
         try (Connection connection = dataSource.getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -84,6 +90,9 @@ public class UserRepository {
                     user.setName(rs.getString("name"));
                     user.setEmail(rs.getString("email"));
                     user.setPasswordHash(rs.getString("password"));
+                    user.setPhoneNumber(rs.getString("phone"));
+                    user.setRole(rs.getString("role"));
+                    user.setVerification(rs.getString("verification"));
                 } else {
                     System.out.println("User not found with id: " + userId);
                 }

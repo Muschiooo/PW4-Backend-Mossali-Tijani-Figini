@@ -63,15 +63,21 @@ public class AuthenticationService {
             user.setName(userRequest.getName());
             user.setEmail(userRequest.getEmail());
             user.setPasswordHash(hash);
+            user.setPhoneNumber(userRequest.getPhoneNumber());
+            user.setRole("client");
+            user.setVerification("pending");
 
             User createdUser = userRepository.createUser(user);
 
 
             CreateUserResponse response = new CreateUserResponse();
 
-            response.setId(user.getId());
-            response.setName(user.getName());
-            response.setEmail(user.getEmail());
+            response.setId(createdUser.getId());
+            response.setName(createdUser.getName());
+            response.setEmail(createdUser.getEmail());
+            response.setPhoneNumber(createdUser.getPhoneNumber());
+            response.setRole(createdUser.getRole());
+            response.setVerification(createdUser.getVerification());
             return response;
 
         } catch (Exception e) {
