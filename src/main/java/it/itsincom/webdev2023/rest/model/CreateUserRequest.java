@@ -14,6 +14,7 @@ public class CreateUserRequest {
     private String role;
 
     private String verification;
+    private String verificationToken;
 
     public int getId() {
         return id;
@@ -69,5 +70,13 @@ public class CreateUserRequest {
 
     public void setVerification(String verification) {
         this.verification = verification;
+    }
+
+    public String getVerificationToken() {
+        return verificationToken;
+    }
+
+    public void setVerificationToken(String verificationToken) {
+        this.verificationToken = verificationToken;
     }
 }

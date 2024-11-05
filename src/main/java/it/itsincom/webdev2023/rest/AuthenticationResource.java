@@ -1,24 +1,32 @@
 package it.itsincom.webdev2023.rest;
 
+import com.mysql.cj.protocol.Message;
+import com.mysql.cj.protocol.MessageSender;
+import io.quarkus.mailer.Mail;
+import io.quarkus.mailer.Mailer;
+import it.itsincom.webdev2023.persistence.model.MailService;
 import it.itsincom.webdev2023.rest.model.CreateUserRequest;
 import it.itsincom.webdev2023.rest.model.CreateUserResponse;
 import it.itsincom.webdev2023.rest.model.LoginRequest;
 import it.itsincom.webdev2023.service.AuthenticationService;
+import it.itsincom.webdev2023.service.UserService;
+import it.itsincom.webdev2023.service.exceptions.NotVerifiedException;
 import it.itsincom.webdev2023.service.exceptions.SessionCreatedException;
 import it.itsincom.webdev2023.service.exceptions.WrongCredentialException;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
 
+import java.util.Map;
+
 @Path("/auth")
 public class AuthenticationResource {
-
-    private final AuthenticationService authenticationService;
-
-    public AuthenticationResource(AuthenticationService authenticationService) {
-        this.authenticationService = authenticationService;
-    }
+    @Inject
+    AuthenticationService authenticationService;
+    @Inject
+    UserService userService;
 
     @POST
     @Path("/register")
@@ -27,9 +35,25 @@ public class AuthenticationResource {
     }
 
     @POST
+    @Path("/verify")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response verifyToken(Map<String, String> requestBody) {
+        String token = requestBody.get("token");
+        boolean isVerified = userService.checkToken(token);
+        if (isVerified) {
+            return Response.ok("User verified successfully").build();
+        } else {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Invalid or expired token").build();
+        }
+    }
+
+
+    @POST
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response login(LoginRequest loginRequest) throws WrongCredentialException, SessionCreatedException {
+    public Response login(LoginRequest loginRequest) throws NotVerifiedException, WrongCredentialException, SessionCreatedException {
         String email = loginRequest.getEmail();
         String password = loginRequest.getPassword();
 
@@ -50,4 +74,5 @@ public class AuthenticationResource {
                 .build();
     }
 }
+
 
