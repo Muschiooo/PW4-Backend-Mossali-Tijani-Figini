@@ -16,43 +16,8 @@ public class UserService {
     @Inject
     UserRepository userRepository;
 
-
-    public User createUser(User user) {
-        // Imposta lo stato di verifica e il token di verifica
-        user.setVerification("pending");
-        String token = generateVerificationToken();
-        user.setVerificationToken(token);
-
-        // Salva l'utente nel database
-        return userRepository.createUser(user);
-    }
-
-    public User findByVerificationToken(String token) {
-        return userRepository.findByVerificationToken(token);
-    }
-
-    public void updateUser(User user) {
-        userRepository.updateUser(user);
-    }
-
     public String generateVerificationToken() {
         return String.valueOf((int) (Math.random() * 900000 + 100000));
-    }
-
-    public CreateUserResponse convertToResponse(User user) {
-        CreateUserResponse response = new CreateUserResponse();
-        response.setId(user.getId());
-        response.setName(user.getName());
-        response.setEmail(user.getEmail());
-        response.setPhoneNumber(user.getPhoneNumber());
-        response.setRole(user.getRole());
-        response.setVerification(user.getVerification());
-        return response;
-    }
-
-    public CreateUserResponse getUserById(int userId) throws SQLException {
-        User u = userRepository.getUserById(userId);
-        return convertToResponse(u);
     }
 
     // Metodo per verificare il token di un utente

@@ -5,11 +5,9 @@ import java.util.List;
 public class Product {
     private int id;
     private String name;
-    private List<String> ingredients;
     private String description;
     private double price;
     private int stock;
-    private Available available;
     private String image;
 
     public int getId() {
@@ -26,14 +24,6 @@ public class Product {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public List<String> getIngredients() {
-        return ingredients;
-    }
-
-    public void setIngredients(List<String> ingredients) {
-        this.ingredients = ingredients;
     }
 
     public String getDescription() {
@@ -58,14 +48,6 @@ public class Product {
 
     public void setStock(int stock) {
         this.stock = stock;
-    }
-
-    public Available getAvailable() {
-        return available;
-    }
-
-    public void setAvailable(Available available) {
-        this.available = available;
     }
 
     public String getImage() {

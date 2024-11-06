@@ -32,7 +32,6 @@ public class AuthenticationService {
     @Inject
     MailService mailService;
 
-
     public int login(String email, String password) throws NotVerifiedException, WrongCredentialException, SessionCreatedException {
         String hash = hashCalculator.calculateHash(password);
         Optional<User> maybeUser = userRepository.findByCredentials(email, hash);
@@ -107,5 +106,6 @@ public class AuthenticationService {
     public void logout(int sessionId) {
         sessionRepository.delete(sessionId);
     }
+
 
 }

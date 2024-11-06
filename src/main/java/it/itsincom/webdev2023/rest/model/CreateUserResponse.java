@@ -1,10 +1,5 @@
 package it.itsincom.webdev2023.rest.model;
 
-import it.itsincom.webdev2023.persistence.model.Comment;
-import it.itsincom.webdev2023.persistence.model.Order;
-
-import java.util.List;
-
 public class CreateUserResponse {
     private int id;
     private String name;

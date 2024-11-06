@@ -1,10 +1,5 @@
 package it.itsincom.webdev2023.rest;
 
-import com.mysql.cj.protocol.Message;
-import com.mysql.cj.protocol.MessageSender;
-import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
-import it.itsincom.webdev2023.persistence.model.MailService;
 import it.itsincom.webdev2023.rest.model.CreateUserRequest;
 import it.itsincom.webdev2023.rest.model.CreateUserResponse;
 import it.itsincom.webdev2023.rest.model.LoginRequest;
@@ -48,7 +43,6 @@ public class AuthenticationResource {
                     .entity("Invalid or expired token").build();
         }
     }
-
 
     @POST
     @Path("/login")

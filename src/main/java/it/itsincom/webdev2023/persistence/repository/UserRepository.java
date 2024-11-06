@@ -2,6 +2,7 @@ package it.itsincom.webdev2023.persistence.repository;
 
 import it.itsincom.webdev2023.persistence.model.User;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -12,12 +13,8 @@ import java.util.Optional;
 
 @ApplicationScoped
 public class UserRepository {
-
-    private final DataSource dataSource;
-
-    public UserRepository(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
+    @Inject
+    DataSource dataSource;
 
     public User createUser(User user) {
         try (Connection connection = dataSource.getConnection()) {
