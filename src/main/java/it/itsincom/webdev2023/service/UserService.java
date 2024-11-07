@@ -2,11 +2,9 @@ package it.itsincom.webdev2023.service;
 
 import it.itsincom.webdev2023.persistence.model.User;
 import it.itsincom.webdev2023.persistence.repository.UserRepository;
-import it.itsincom.webdev2023.rest.model.CreateUserResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

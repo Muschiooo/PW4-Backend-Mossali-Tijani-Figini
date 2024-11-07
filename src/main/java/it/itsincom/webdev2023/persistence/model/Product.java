@@ -1,7 +1,5 @@
 package it.itsincom.webdev2023.persistence.model;
 
-import java.util.List;
-
 public class Product {
     private int id;
     private String name;
@@ -9,6 +7,7 @@ public class Product {
     private double price;
     private int stock;
     private String image;
+    private String availability;
 
     public int getId() {
         return id;
@@ -56,5 +55,13 @@ public class Product {
 
     public void setImage(String image) {
         this.image = image;
+    }
+
+    public String getAvailability() {
+        return availability;
+    }
+
+    public void setAvailability(String availability) {
+        this.availability = availability;
     }
 }
