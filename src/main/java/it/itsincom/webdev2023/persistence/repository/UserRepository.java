@@ -101,6 +101,33 @@ public class UserRepository {
         return user;
     }
 
+    public User getUserByEmail(String email) throws SQLException {
+        User user = null;
+        String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE email = ?";
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    user = new User();
+                    user.setId(rs.getInt("id"));
+                    user.setName(rs.getString("name"));
+                    user.setEmail(rs.getString("email"));
+                    user.setPasswordHash(rs.getString("password"));
+                    user.setPhoneNumber(rs.getString("phone"));
+                    user.setRole(rs.getString("role"));
+                    user.setVerification(rs.getString("verification"));
+                    user.setVerificationToken(rs.getString("verification_token"));
+                } else {
+                    System.out.println("User not found with id: " + email);
+                }
+            }
+        }
+        return user;
+    }
+
     public User findByVerificationToken(String token) {
         try (Connection connection = dataSource.getConnection()) {
             String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE verification_token = ?";
@@ -138,5 +165,30 @@ public class UserRepository {
         } catch (SQLException e) {
             throw new RuntimeException("Error updating user in the database", e);
         }
+    }
+
+    public User getAdmin() {
+        try (Connection connection = dataSource.getConnection()) {
+            String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE role = 'admin'";
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        User user = new User();
+                        user.setId(resultSet.getInt("id"));
+                        user.setName(resultSet.getString("name"));
+                        user.setEmail(resultSet.getString("email"));
+                        user.setPasswordHash(resultSet.getString("password"));
+                        user.setPhoneNumber(resultSet.getString("phone"));
+                        user.setRole(resultSet.getString("role"));
+                        user.setVerification(resultSet.getString("verification"));
+                        user.setVerificationToken(resultSet.getString("verification_token"));
+                        return user;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error retrieving admin user", e);
+        }
+        return null;
     }
 }

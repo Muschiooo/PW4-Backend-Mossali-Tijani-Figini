@@ -3,11 +3,13 @@ package it.itsincom.webdev2023.service;
 import it.itsincom.webdev2023.persistence.model.*;
 import it.itsincom.webdev2023.persistence.repository.OrderMongoRepository;
 import it.itsincom.webdev2023.persistence.repository.ProductRepository;
+import it.itsincom.webdev2023.persistence.repository.UserRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.bson.types.ObjectId;
 
+import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -15,15 +17,17 @@ import java.util.Optional;
 
 @ApplicationScoped
 public class OrderService {
-
     @Inject
-    OrderMongoRepository    orderMongoRepository;
-
+    OrderMongoRepository orderMongoRepository;
+    @Inject
+    UserRepository userRepository;
     @Inject
     ProductRepository productRepository;
+    @Inject
+    MailService mailService;
 
     @Transactional
-    public boolean createOrder(OrderMongo order) {
+    public boolean createOrder(OrderMongo order) throws SQLException {
         double totalPrice = 0.0;
 
         // Imposta la data di creazione dell'ordine
@@ -68,6 +72,31 @@ public class OrderService {
         order.setTotalPrice(totalPrice);  // Imposta il prezzo totale
         order.setStatus("pending");  // Imposta lo stato dell'ordine
         orderMongoRepository.save(order);  // Salva l'ordine nel database MongoDB
+
+        User client = userRepository.getUserByEmail(order.getUserEmail());
+
+        String mailText = "Ciao " + client.getName() + ",\n"
+                + "Abbiamo ricevuto il tuo ordine! Qui ci sono i dettagli:\n"
+                + "Data di creazione: " + orderMongoRepository.dateTimeFormatter(order.getOrderDate()) + "\n"
+                + "Data di ritiro: " + orderMongoRepository.dateTimeFormatter(order.getDeliverDate()) + "\n"
+                + "Prezzo totale: " + Math.round(order.getTotalPrice() * 100.0) /100.0 + "€\n"
+                + "Stato: " + order.getStatus() + "\n"
+                + "Sarai avvisato quando l'ordine verrà accettato e preparato.\n"
+                + "Grazie per aver scelto Pasticceria C'est la Vie!";
+
+        mailService.sendVerificationEmail(client.getEmail(), client.getName(), mailText);
+
+        User admin = userRepository.getAdmin();
+
+        String mailTextAdmin = "Ciao " + admin.getName() + ",\n"
+                + "Un nuovo ordine è stato effettuato! Qui ci sono i dettagli:\n"
+                + "Data di creazione: " + orderMongoRepository.dateTimeFormatter(order.getOrderDate()) + "\n"
+                + "Data di ritiro: " + orderMongoRepository.dateTimeFormatter(order.getDeliverDate()) + "€\n"
+                + "Prezzo totale: " + Math.round(order.getTotalPrice() * 100.0) /100.0 + "\n"
+                + "Stato: " + order.getStatus() + "\n"
+                + "Controlla la dashboard per accettare l'ordine.\n";
+
+        mailService.sendVerificationEmail(admin.getEmail(), admin.getName(), mailTextAdmin);
 
         return true;
     }
@@ -114,7 +143,7 @@ public class OrderService {
     }
 
     @Transactional
-    public boolean acceptOrder(String id) {
+    public boolean acceptOrder(String id) throws SQLException {
         if (!isValidObjectId(id)) {
             throw new IllegalArgumentException("ID non valido: " + id);
         }
@@ -130,11 +159,23 @@ public class OrderService {
 
         order.setStatus("accepted");
         orderMongoRepository.update(order);  // Aggiorna lo stato dell'ordine
+
+        User client = userRepository.getUserByEmail(order.getUserEmail());
+
+        String mailText = "Ciao " + client.getName() + ",\n"
+                + "Il tuo ordine è stato accettato! Qui ci sono i dettagli:\n"
+                + "Data di creazione: " + order.getOrderDate() + "\n"
+                + "Data di ritiro: " + order.getDeliverDate() + "\n"
+                + "Prezzo totale: " + order.getTotalPrice() + "\n"
+                + "Stato: " + order.getStatus() + "\n"
+                + "Grazie per aver scelto Pasticceria C'est la Vie!";
+
+        mailService.sendVerificationEmail(client.getEmail(), client.getName(), mailText);
         return true;
     }
 
     @Transactional
-    public boolean deliverOrder(String id) {
+    public boolean deliverOrder(String id) throws SQLException {
         if (!isValidObjectId(id)) {
             throw new IllegalArgumentException("ID non valido: " + id);
         }
@@ -150,6 +191,15 @@ public class OrderService {
 
         order.setStatus("delivered");
         orderMongoRepository.update(order);
+        User client = userRepository.getUserByEmail(order.getUserEmail());
+
+        String mailText = "Ciao " + client.getName() + ",\n"
+                + "Il tuo ordine è stato ritirato!\n"
+                + "Grazie ancora per aver scelto Pasticceria C'est la Vie!\n"
+                + "Speriamo di vederti presto!";
+
+        mailService.sendVerificationEmail(client.getEmail(), client.getName(), mailText);
+
         return true;
     }
 

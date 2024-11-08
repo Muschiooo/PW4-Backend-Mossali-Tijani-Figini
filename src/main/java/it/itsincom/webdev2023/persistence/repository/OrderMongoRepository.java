@@ -15,6 +15,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
@@ -255,4 +257,11 @@ public class OrderMongoRepository {
         return order;
     }
 
+    public String dateTimeFormatter(Date date) {
+        ZonedDateTime dateTime = ZonedDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd 'alle ore' HH.mm");
+        String formattedDate = dateTime.format(formatter);
+        System.out.println(formattedDate);
+        return formattedDate;
+    }
 }

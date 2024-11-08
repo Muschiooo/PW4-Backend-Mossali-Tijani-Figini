@@ -24,7 +24,7 @@ public class OrderResource {
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createOrder(OrderMongo order) {
+    public Response createOrder(OrderMongo order) throws SQLException {
         boolean success = orderService.createOrder(order);
         if (success) {
             return Response.ok("Order created successfully.").build();
