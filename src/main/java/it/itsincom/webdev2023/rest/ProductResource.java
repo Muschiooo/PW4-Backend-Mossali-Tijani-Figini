@@ -1,6 +1,8 @@
 package it.itsincom.webdev2023.rest;
 
 import it.itsincom.webdev2023.persistence.model.Product;
+import it.itsincom.webdev2023.rest.model.CreateUserResponse;
+import it.itsincom.webdev2023.service.AuthenticationService;
 import it.itsincom.webdev2023.service.ProductService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -16,12 +18,20 @@ public class ProductResource {
     @Inject
     ProductService productService;
 
+    @Inject
+    AuthenticationService authenticationService;
+
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response createProduct(Product product) {
-        Product createdProduct = productService.createProduct(product);
-        return Response.status(Response.Status.CREATED).entity(createdProduct).build();
+    public Response createProduct(@CookieParam("SESSION_COOKIE") int sessionId, Product product) throws SQLException {
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (user.getRole().equals("admin")) {
+            Product createdProduct = productService.createProduct(product);
+            return Response.status(Response.Status.CREATED).entity(createdProduct).build();
+        } else {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
+        }
     }
 
     @GET
@@ -59,36 +69,51 @@ public class ProductResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public Response updateStock(@PathParam("id") int id, Product updatedProduct) throws SQLException {
-        Product product = productService.findProductById(id);
+    public Response updateStock(@CookieParam("SESSION_COOKIE") int sessionId, @PathParam("id") int id, Product updatedProduct) throws SQLException {
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (user.getRole().equals("admin")) {
+            Product product = productService.findProductById(id);
 
-        if (product == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+            if (product == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            product.setStock(updatedProduct.getStock());
+            productService.updateProductStock(product);
+
+            return Response.ok().build();
+        } else {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
         }
-
-        product.setStock(updatedProduct.getStock());
-        productService.updateProductStock(product);
-
-        return Response.ok().build();
     }
 
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{name}")
-    public Response updateProduct(@PathParam("name") String name, Product updatedProduct) {
-        Product product = productService.findProductByName(name);
-        if (product == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+    public Response updateProduct(@CookieParam("SESSION_COOKIE") int sessionId, @PathParam("name") String name, Product updatedProduct) throws SQLException {
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (user.getRole().equals("admin")) {
+            Product product = productService.findProductByName(name);
+            if (product == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            updatedProduct.setId(product.getId());
+            productService.updateProduct(updatedProduct);
+            return Response.ok().build();
+        } else {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
         }
-        updatedProduct.setId(product.getId());
-        productService.updateProduct(updatedProduct);
-        return Response.ok().build();
     }
 
     @DELETE
     @Path("/{id}")
-    public Response deleteProduct(@PathParam("id") int id) {
-        productService.deleteProduct(id);
-        return Response.ok().build();
+    public Response deleteProduct(@CookieParam("SESSION_COOKIE") int sessionId, @PathParam("id") int id) throws SQLException {
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (user.getRole().equals("admin")) {
+            productService.deleteProduct(id);
+            return Response.ok().build();
+        } else {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
+        }
     }
 }

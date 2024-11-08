@@ -139,5 +139,4 @@ public class UserRepository {
             throw new RuntimeException("Error updating user in the database", e);
         }
     }
-
 }

@@ -2,9 +2,12 @@ package it.itsincom.webdev2023.service;
 
 import it.itsincom.webdev2023.persistence.model.User;
 import it.itsincom.webdev2023.persistence.repository.UserRepository;
+import it.itsincom.webdev2023.rest.model.CreateUserRequest;
+import it.itsincom.webdev2023.rest.model.CreateUserResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,5 +51,21 @@ public class UserService {
             LOGGER.log(Level.SEVERE, "Error verifying token: " + token, e);
             return false; // Errore durante la verifica
         }
+    }
+
+    private CreateUserResponse convertToResponse(User user) {
+        CreateUserResponse response = new CreateUserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setPhoneNumber(user.getPhoneNumber());
+        response.setRole(user.getRole());
+        return response;
+    }
+
+    public CreateUserResponse getUserById(int userId) throws SQLException {
+        User u = userRepository.getUserById(userId);
+        CreateUserResponse ur = convertToResponse(u);
+        return ur;
     }
 }

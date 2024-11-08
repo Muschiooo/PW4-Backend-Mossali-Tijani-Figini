@@ -3,6 +3,7 @@ package it.itsincom.webdev2023.persistence.model;
 import io.quarkus.mongodb.panache.common.MongoEntity;
 import org.bson.types.ObjectId;
 
+import java.util.Date;
 import java.util.Map;
 
 @MongoEntity(collection="orders")
@@ -11,8 +12,8 @@ public class OrderMongo {
     public String userEmail;
     public Map<String, ProductDetail> details;  // Dettagli dell'ordine (Map)
     public double totalPrice;
-    public String orderDate;
-    public String deliverDate;
+    public Date orderDate;
+    public Date deliverDate;
     public String status;
 
     public ObjectId getId() {
@@ -47,19 +48,19 @@ public class OrderMongo {
         this.totalPrice = totalPrice;
     }
 
-    public String getOrderDate() {
+    public Date getOrderDate() {
         return orderDate;
     }
 
-    public void setOrderDate(String orderDate) {
+    public void setOrderDate(Date orderDate) {
         this.orderDate = orderDate;
     }
 
-    public String getDeliverDate() {
+    public Date getDeliverDate() {
         return deliverDate;
     }
 
-    public void setDeliverDate(String deliverDate) {
+    public void setDeliverDate(Date deliverDate) {
         this.deliverDate = deliverDate;
     }
 

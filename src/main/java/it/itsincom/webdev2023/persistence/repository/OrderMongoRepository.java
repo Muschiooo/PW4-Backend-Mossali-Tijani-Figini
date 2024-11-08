@@ -1,7 +1,10 @@
 package it.itsincom.webdev2023.persistence.repository;
 
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Sorts;
 import it.itsincom.webdev2023.persistence.model.OrderMongo;
+import it.itsincom.webdev2023.persistence.model.Product;
 import it.itsincom.webdev2023.persistence.model.ProductDetail;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -14,11 +17,17 @@ import org.bson.Document;
 
 import java.util.*;
 
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Sorts.descending;
+
 @ApplicationScoped
 public class OrderMongoRepository {
 
     @Inject
     MongoClient mongoClient;
+
+    @Inject
+    ProductRepository productRepository;
 
     private MongoCollection<Document> getOrdersCollection() {
         MongoDatabase database = mongoClient.getDatabase("pasticceria");
@@ -54,9 +63,12 @@ public class OrderMongoRepository {
     public List<OrderMongo> findAll() {
         MongoCollection<Document> collection = getOrdersCollection();
         List<OrderMongo> orders = new ArrayList<>();
+        FindIterable<Document> findIterable = collection.find();  // Trova tutti i documenti nella collection
 
-        for (Document document : collection.find()) {
+        for (Document document : findIterable) {
             OrderMongo order = new OrderMongo();
+
+            // Impostazione dei campi principali dell'ordine
             order.setId(document.getObjectId("_id"));
             order.setUserEmail(document.getString("userEmail"));
             order.setTotalPrice(document.getDouble("totalPrice"));
@@ -64,127 +76,104 @@ public class OrderMongoRepository {
             order.setDeliverDate(document.getDate("deliverDate"));
             order.setStatus(document.getString("status"));
 
-            // Debug: Aggiungi un log per vedere la struttura completa del documento
-            System.out.println("Documento MongoDB: " + document.toJson()); // Aggiungi questo per vedere tutto il documento
+            // Recupero dei dettagli dell'ordine come lista
+            List<Document> detailsList = (List<Document>) document.get("details");
+            Map<String, ProductDetail> detailsMap = new HashMap<>();
 
-            // Verifica se 'details' è presente e trattalo di conseguenza
-            Object detailsObject = document.get("details");
-            Map<String, ProductDetail> productDetailsMap = new HashMap<>();
+            // Iterazione sui dettagli dell'ordine
+            for (Document detailDoc : detailsList) {
+                String productId = detailDoc.getString("productId");
 
-            if (detailsObject != null) {
-                // Se 'details' è una lista
-                if (detailsObject instanceof List) {
-                    List<Document> detailsList = (List<Document>) detailsObject;
-                    System.out.println("Tipo di 'details' identificato come lista: " + detailsList.getClass()); // Verifica il tipo di 'details'
-
-                    // Cicla su ogni elemento nella lista
-                    for (Document detailDoc : detailsList) {
-                        String productId = detailDoc.getString("productId"); // Assicurati che `productId` sia presente
-                        if (productId != null) {
+                // Verifica che productId non sia null o vuoto
+                if (productId != null && !productId.isEmpty()) {
+                    try {
+                        // Recupera il prodotto dal repository usando il productId
+                        Product product = productRepository.findProductById(Integer.parseInt(productId));
+                        if (product != null) {
+                            // Se il prodotto è trovato, crea un ProductDetail
                             ProductDetail detail = new ProductDetail();
                             detail.setQuantity(detailDoc.getInteger("quantity"));
                             detail.setPrice(detailDoc.getDouble("price"));
-
-                            // Se 'name' è null, non settarlo
-                            String name = detailDoc.getString("name");
-                            if (name != null) {
-                                detail.setName(name);
-                            }
-
-                            productDetailsMap.put(productId, detail);
+                            detail.setName(product.getName());  // Aggiungi il nome del prodotto
+                            detailsMap.put(productId, detail);  // Aggiungi il dettaglio all'elenco
                         }
+                    } catch (Exception e) {
+                        // Gestisci eventuali errori nel recupero del prodotto
+                        System.err.println("Errore nel recupero del prodotto per productId: " + productId);
                     }
                 } else {
-                    // Se 'details' è un tipo diverso (es. Map o altro)
-                    System.out.println("Campo details trovato ma non è una lista: " + detailsObject.getClass());
+                    // Gestisci il caso in cui productId è null o vuoto
+                    System.err.println("productId mancante o vuoto per un prodotto.");
                 }
-            } else {
-                // Se 'details' non esiste
-                System.out.println("Campo details non trovato nel documento");
             }
 
-            order.setDetails(productDetailsMap);  // Popola la mappa con i dettagli
+            // Impostazione dei dettagli nell'ordine
+            order.setDetails(detailsMap);
+
+            // Aggiungi l'ordine alla lista
             orders.add(order);
         }
 
         return orders;
     }
 
-    public OrderMongo findById(String orderId) {
+    public OrderMongo findById(ObjectId id) {
         MongoCollection<Document> collection = getOrdersCollection();
-        Document document = collection.find(Filters.eq("_id", new ObjectId(orderId))).first();
+        Document document = collection.find(new Document("_id", id)).first();
+        if (document == null) {
+            return null;
+        }
+        OrderMongo order = new OrderMongo();
+        order.setId(document.getObjectId("_id"));
+        order.setUserEmail(document.getString("userEmail"));
+        order.setTotalPrice(document.getDouble("totalPrice"));
+        order.setOrderDate(document.getDate(("orderDate")));
+        order.setDeliverDate(document.getDate("deliverDate"));
+        order.setStatus(document.getString("status"));
 
-        if (document != null) {
-            OrderMongo order = new OrderMongo();
-            order.setId(document.getObjectId("_id"));
-            order.setUserEmail(document.getString("userEmail"));
-            order.setTotalPrice(document.getDouble("totalPrice"));
-            order.setOrderDate(document.getDate("orderDate"));
-            order.setDeliverDate(document.getDate("deliverDate"));
-            order.setStatus(document.getString("status"));
+        // Adatta la lettura dei dettagli come una lista
+        List<Document> detailsList = (List<Document>) document.get("details");
+        Map<String, ProductDetail> detailsMap = new HashMap<>();
+        for (Document detailDoc : detailsList) {
+            String productId = detailDoc.getString("productId");
 
-            // Leggi i dettagli dell'ordine
-            Object detailsObj = document.get("details");
-            Map<String, ProductDetail> detailsMap = new HashMap<>();
-
-            // Verifica se details è una lista o un singolo documento
-            if (detailsObj instanceof List) {
-                // Se details è una lista, trattalo come tale
-                List<Document> detailsList = (List<Document>) detailsObj;
-                for (Document detailDoc : detailsList) {
-                    String productId = detailDoc.getString("productId");
-                    ProductDetail detail = new ProductDetail();
-                    detail.setQuantity(detailDoc.getInteger("quantity"));
-                    detail.setPrice(detailDoc.getDouble("price"));
-                    detailsMap.put(productId, detail);
+            // Verifica che il productId sia valido prima di utilizzarlo
+            if (productId != null && !productId.isEmpty()) {
+                try {
+                    // Prosegui con il recupero del prodotto dal repository
+                    Product product = productRepository.findProductById(Integer.parseInt(productId));
+                    if (product != null) {
+                        ProductDetail detail = new ProductDetail();
+                        detail.setQuantity(detailDoc.getInteger("quantity"));
+                        detail.setPrice(detailDoc.getDouble("price"));
+                        detailsMap.put(productId, detail);
+                    }
+                } catch (NumberFormatException e) {
+                    // Gestisci il caso in cui productId non può essere convertito in intero
+                    System.err.println("Errore nel parsing del productId: " + productId);
                 }
-            } else if (detailsObj instanceof Document) {
-                // Se details è un singolo document, trattalo come tale
-                Document detailDoc = (Document) detailsObj;
-                String productId = detailDoc.getString("productId");
-                ProductDetail detail = new ProductDetail();
-                detail.setQuantity(detailDoc.getInteger("quantity"));
-                detail.setPrice(detailDoc.getDouble("price"));
-                detailsMap.put(productId, detail);
             } else {
-                // Gestisci il caso in cui details non è né una lista né un document
-                throw new IllegalStateException("Unexpected structure for details");
+                // Gestisci il caso in cui productId è null o vuoto
+                System.err.println("productId mancante o vuoto per un prodotto.");
             }
-
-            order.setDetails(detailsMap);  // Popola la mappa con i dettagli
-
-            return order;
         }
 
-        return null;
+        order.setDetails(detailsMap);
+
+        return order;
     }
 
     public void update(OrderMongo order) {
-        // Converte la mappa dei dettagli in una lista di Document
-        List<Document> detailsList = new ArrayList<>();
-        for (ProductDetail detail : order.getDetails().values()) {
-            Document detailDoc = new Document();
-            detailDoc.append("name", detail.getName());  // Assicurati che il nome del campo corrisponda a quello nel DB
-            detailDoc.append("quantity", detail.getQuantity());
-            detailDoc.append("price", detail.getPrice());
-            detailsList.add(detailDoc);
-        }
-
-        // Crea il documento di aggiornamento
-        Document updatedOrder = new Document()
+        MongoCollection<Document> collection = getOrdersCollection();
+        Document document = new Document()
                 .append("userEmail", order.getUserEmail())
-                .append("details", detailsList)  // Usa la lista di dettagli
+                .append("details", convertProductDetailsToList(order.getDetails()))
                 .append("totalPrice", order.getTotalPrice())
-                .append("orderDate", order.getOrderDate())  // Assicurati di usare la funzione corretta per la conversione
+                .append("orderDate", order.getOrderDate())
                 .append("deliverDate", order.getDeliverDate())
                 .append("status", order.getStatus());
 
-        // Esegui l'aggiornamento dell'ordine nel database
-        MongoCollection<Document> collection = getOrdersCollection();
-        collection.updateOne(
-                new Document("_id", order.getId()),  // Cerca l'ordine per ID
-                new Document("$set", updatedOrder)   // Imposta i nuovi valori
-        );
+        collection.updateOne(new Document("_id", order.getId()), new Document("$set", document));
     }
 
 
@@ -202,7 +191,7 @@ public class OrderMongoRepository {
     public List<OrderMongo> findByUserEmail(String email) {
         MongoCollection<Document> collection = getOrdersCollection();
         List<OrderMongo> orders = new ArrayList<>();
-        for (Document document : collection.find(Filters.eq("userEmail", email))) {
+        for (Document document : collection.find(eq("userEmail", email))) {
             OrderMongo order = new OrderMongo();
             order.setId(document.getObjectId("_id"));
             order.setUserEmail(document.getString("userEmail"));
@@ -226,6 +215,44 @@ public class OrderMongoRepository {
             orders.add(order);
         }
         return orders;
+    }
+
+    public OrderMongo findLatestDeliveryDate() {
+        MongoCollection<Document> collection = getOrdersCollection();
+
+        // Trova l'ordine con il deliverDate più recente ordinando in ordine decrescente
+        Document document = collection
+                .find()
+                .sort(Sorts.descending("deliverDate"))
+                .first();  // Prende solo il primo risultato
+
+        // Se non esiste alcun ordine, ritorna null
+        if (document == null) {
+            return null;
+        }
+
+        // Creazione dell'oggetto OrderMongo basato sui campi del documento
+        OrderMongo order = new OrderMongo();
+        order.setId(document.getObjectId("_id"));
+        order.setUserEmail(document.getString("userEmail"));
+        order.setTotalPrice(document.getDouble("totalPrice"));
+        order.setOrderDate(document.getDate("orderDate"));
+        order.setDeliverDate(document.getDate("deliverDate"));
+        order.setStatus(document.getString("status"));
+
+        // Estrazione e mappatura dei dettagli dell'ordine
+        List<Document> detailsList = (List<Document>) document.get("details");
+        Map<String, ProductDetail> detailsMap = new HashMap<>();
+        for (Document detailDoc : detailsList) {
+            String productId = detailDoc.getString("productId");
+            ProductDetail detail = new ProductDetail();
+            detail.setQuantity(detailDoc.getInteger("quantity"));
+            detail.setPrice(detailDoc.getDouble("price"));
+            detailsMap.put(productId, detail);
+        }
+        order.setDetails(detailsMap);
+
+        return order;
     }
 
 }

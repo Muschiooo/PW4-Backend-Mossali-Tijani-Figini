@@ -3,10 +3,19 @@ package it.itsincom.webdev2023.persistence.model;
 import io.quarkus.mongodb.panache.common.MongoEntity;
 
 @MongoEntity(collection="order_details")
-public  class ProductDetail {
-    public String name;
-    public int quantity;
-    public double price;
+public class ProductDetail {
+    private String productId;  // Aggiungi il campo productId
+    private String name;
+    private int quantity;
+    private double price;
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
 
     public String getName() {
         return name;

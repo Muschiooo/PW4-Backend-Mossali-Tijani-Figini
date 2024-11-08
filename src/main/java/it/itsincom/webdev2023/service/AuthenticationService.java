@@ -1,6 +1,7 @@
 package it.itsincom.webdev2023.service;
 
 import it.itsincom.webdev2023.persistence.model.MailService;
+import it.itsincom.webdev2023.persistence.model.Session;
 import it.itsincom.webdev2023.persistence.model.User;
 import it.itsincom.webdev2023.persistence.repository.SessionRepository;
 import it.itsincom.webdev2023.persistence.repository.UserRepository;
@@ -31,6 +32,7 @@ public class AuthenticationService {
     UserService userService;
     @Inject
     MailService mailService;
+
 
     public int login(String email, String password) throws NotVerifiedException, WrongCredentialException, SessionCreatedException {
         String hash = hashCalculator.calculateHash(password);
@@ -105,5 +107,18 @@ public class AuthenticationService {
         sessionRepository.delete(sessionId);
     }
 
+    public CreateUserResponse getProfile(int sessionId) throws SQLException {
+        Session s = sessionRepository.getSessionById(sessionId);
+        int userId = s.getUserId();
+        CreateUserResponse user = userService.getUserById(userId);
 
+        CreateUserResponse response = new CreateUserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setPhoneNumber(user.getPhoneNumber());
+        response.setRole(user.getRole());
+
+        return response;
+    }
 }
