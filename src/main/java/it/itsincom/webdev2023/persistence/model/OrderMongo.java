@@ -10,6 +10,7 @@ import java.util.Map;
 public class OrderMongo {
     public ObjectId id;
     public String userEmail;
+    public String comment;
     public Map<String, ProductDetail> details;  // Dettagli dell'ordine (Map)
     public double totalPrice;
     public Date orderDate;
@@ -30,6 +31,14 @@ public class OrderMongo {
 
     public void setUserEmail(String userEmail) {
         this.userEmail = userEmail;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 
     public Map<String, ProductDetail> getDetails() {

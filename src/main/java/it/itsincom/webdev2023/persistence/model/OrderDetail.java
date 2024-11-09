@@ -12,7 +12,7 @@ public class OrderDetail {
     // Modifica il tipo da Order a OrderMongo
     @ManyToOne
     @JoinColumn(name = "order_id")
-    private OrderMongo order;  // Ora accetta OrderMongo
+    private OrderMongo order;
 
     @ManyToOne
     @JoinColumn(name = "product_id")

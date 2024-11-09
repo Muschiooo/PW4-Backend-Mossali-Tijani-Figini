@@ -53,7 +53,8 @@ public class OrderMongoRepository {
         MongoCollection<Document> collection = getOrdersCollection();
         Document document = new Document()
                 .append("userEmail", order.getUserEmail())
-                .append("details", convertProductDetailsToList(order.getDetails()))  // Usa la lista convertita
+                .append("comment", order.getComment())
+                .append("details", convertProductDetailsToList(order.getDetails()))
                 .append("totalPrice", order.getTotalPrice())
                 .append("orderDate", order.getOrderDate())
                 .append("deliverDate", order.getDeliverDate())
@@ -65,54 +66,44 @@ public class OrderMongoRepository {
     public List<OrderMongo> findAll() {
         MongoCollection<Document> collection = getOrdersCollection();
         List<OrderMongo> orders = new ArrayList<>();
-        FindIterable<Document> findIterable = collection.find();  // Trova tutti i documenti nella collection
+        FindIterable<Document> findIterable = collection.find();
 
         for (Document document : findIterable) {
             OrderMongo order = new OrderMongo();
 
-            // Impostazione dei campi principali dell'ordine
             order.setId(document.getObjectId("_id"));
             order.setUserEmail(document.getString("userEmail"));
+            order.setComment(document.getString("comment"));
             order.setTotalPrice(document.getDouble("totalPrice"));
             order.setOrderDate(document.getDate("orderDate"));
             order.setDeliverDate(document.getDate("deliverDate"));
             order.setStatus(document.getString("status"));
 
-            // Recupero dei dettagli dell'ordine come lista
             List<Document> detailsList = (List<Document>) document.get("details");
             Map<String, ProductDetail> detailsMap = new HashMap<>();
 
-            // Iterazione sui dettagli dell'ordine
             for (Document detailDoc : detailsList) {
                 String productId = detailDoc.getString("productId");
 
-                // Verifica che productId non sia null o vuoto
                 if (productId != null && !productId.isEmpty()) {
                     try {
-                        // Recupera il prodotto dal repository usando il productId
                         Product product = productRepository.findProductById(Integer.parseInt(productId));
                         if (product != null) {
-                            // Se il prodotto è trovato, crea un ProductDetail
                             ProductDetail detail = new ProductDetail();
                             detail.setQuantity(detailDoc.getInteger("quantity"));
                             detail.setPrice(detailDoc.getDouble("price"));
-                            detail.setName(product.getName());  // Aggiungi il nome del prodotto
-                            detailsMap.put(productId, detail);  // Aggiungi il dettaglio all'elenco
+                            detail.setName(product.getName());
+                            detailsMap.put(productId, detail);
                         }
                     } catch (Exception e) {
-                        // Gestisci eventuali errori nel recupero del prodotto
                         System.err.println("Errore nel recupero del prodotto per productId: " + productId);
                     }
                 } else {
-                    // Gestisci il caso in cui productId è null o vuoto
                     System.err.println("productId mancante o vuoto per un prodotto.");
                 }
             }
-
-            // Impostazione dei dettagli nell'ordine
             order.setDetails(detailsMap);
 
-            // Aggiungi l'ordine alla lista
             orders.add(order);
         }
 
@@ -128,21 +119,19 @@ public class OrderMongoRepository {
         OrderMongo order = new OrderMongo();
         order.setId(document.getObjectId("_id"));
         order.setUserEmail(document.getString("userEmail"));
+        order.setComment(document.getString("comment"));
         order.setTotalPrice(document.getDouble("totalPrice"));
         order.setOrderDate(document.getDate(("orderDate")));
         order.setDeliverDate(document.getDate("deliverDate"));
         order.setStatus(document.getString("status"));
 
-        // Adatta la lettura dei dettagli come una lista
         List<Document> detailsList = (List<Document>) document.get("details");
         Map<String, ProductDetail> detailsMap = new HashMap<>();
         for (Document detailDoc : detailsList) {
             String productId = detailDoc.getString("productId");
 
-            // Verifica che il productId sia valido prima di utilizzarlo
             if (productId != null && !productId.isEmpty()) {
                 try {
-                    // Prosegui con il recupero del prodotto dal repository
                     Product product = productRepository.findProductById(Integer.parseInt(productId));
                     if (product != null) {
                         ProductDetail detail = new ProductDetail();
@@ -151,11 +140,9 @@ public class OrderMongoRepository {
                         detailsMap.put(productId, detail);
                     }
                 } catch (NumberFormatException e) {
-                    // Gestisci il caso in cui productId non può essere convertito in intero
                     System.err.println("Errore nel parsing del productId: " + productId);
                 }
             } else {
-                // Gestisci il caso in cui productId è null o vuoto
                 System.err.println("productId mancante o vuoto per un prodotto.");
             }
         }
@@ -169,6 +156,7 @@ public class OrderMongoRepository {
         MongoCollection<Document> collection = getOrdersCollection();
         Document document = new Document()
                 .append("userEmail", order.getUserEmail())
+                .append("comment", order.getComment())
                 .append("details", convertProductDetailsToList(order.getDetails()))
                 .append("totalPrice", order.getTotalPrice())
                 .append("orderDate", order.getOrderDate())
@@ -197,6 +185,7 @@ public class OrderMongoRepository {
             OrderMongo order = new OrderMongo();
             order.setId(document.getObjectId("_id"));
             order.setUserEmail(document.getString("userEmail"));
+            order.setComment(document.getString("comment"));
             order.setTotalPrice(document.getDouble("totalPrice"));
             order.setOrderDate(document.getDate(("orderDate")));
             order.setDeliverDate(document.getDate("deliverDate"));
@@ -222,27 +211,24 @@ public class OrderMongoRepository {
     public OrderMongo findLatestDeliveryDate() {
         MongoCollection<Document> collection = getOrdersCollection();
 
-        // Trova l'ordine con il deliverDate più recente ordinando in ordine decrescente
         Document document = collection
                 .find()
                 .sort(Sorts.descending("deliverDate"))
-                .first();  // Prende solo il primo risultato
+                .first();
 
-        // Se non esiste alcun ordine, ritorna null
         if (document == null) {
             return null;
         }
 
-        // Creazione dell'oggetto OrderMongo basato sui campi del documento
         OrderMongo order = new OrderMongo();
         order.setId(document.getObjectId("_id"));
         order.setUserEmail(document.getString("userEmail"));
+        order.setComment(document.getString("comment"));
         order.setTotalPrice(document.getDouble("totalPrice"));
         order.setOrderDate(document.getDate("orderDate"));
         order.setDeliverDate(document.getDate("deliverDate"));
         order.setStatus(document.getString("status"));
 
-        // Estrazione e mappatura dei dettagli dell'ordine
         List<Document> detailsList = (List<Document>) document.get("details");
         Map<String, ProductDetail> detailsMap = new HashMap<>();
         for (Document detailDoc : detailsList) {
