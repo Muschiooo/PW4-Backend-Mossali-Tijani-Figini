@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
@@ -190,6 +192,45 @@ public class UserRepository {
             }
         } catch (SQLException e) {
             throw new RuntimeException("Error verifying user", e);
+        }
+    }
+
+    public List<User> getAllClients() {
+        try (Connection connection = dataSource.getConnection()) {
+            String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE role = 'client'";
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                try (ResultSet resultSet = statement.executeQuery()) {
+
+                    List<User> users = new ArrayList<>();
+                    while (resultSet.next()) {
+                        User user = new User();
+                        user.setId(resultSet.getInt("id"));
+                        user.setName(resultSet.getString("name"));
+                        user.setEmail(resultSet.getString("email"));
+                        user.setPasswordHash(resultSet.getString("password"));
+                        user.setPhoneNumber(resultSet.getString("phone"));
+                        user.setRole(resultSet.getString("role"));
+                        user.setVerification(resultSet.getString("verification"));
+                        user.setVerificationToken(resultSet.getString("verification_token"));
+                        users.add(user);
+                    }
+                    return users;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error retrieving all clients", e);
+        }
+    }
+
+    public void deleteUser(int id) {
+        try (Connection connection = dataSource.getConnection()) {
+            String sql = "DELETE FROM user WHERE id = ?";
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, id);
+                statement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error deleting user", e);
         }
     }
 }

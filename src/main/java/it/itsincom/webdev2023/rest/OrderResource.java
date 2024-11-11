@@ -87,7 +87,7 @@ public class OrderResource {
 
     @DELETE
     @Path("{id}")
-    public Response deleteOrder(@PathParam("id") String id) {
+    public Response deleteOrder( @PathParam("id") String id) {
         boolean success = orderService.deleteOrder(id);
         if (success) {
             return Response.ok("Order deleted successfully.").build();

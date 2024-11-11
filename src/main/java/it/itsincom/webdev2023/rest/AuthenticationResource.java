@@ -99,7 +99,6 @@ public class AuthenticationResource {
     }
 
 
-
     @DELETE
     @Path("/logout")
     public Response logout(@CookieParam("SESSION_COOKIE") int sessionId) {
@@ -120,6 +119,30 @@ public class AuthenticationResource {
             return Response.ok(user).build();
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @GET
+    @Path("/clients")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getAllClients(@CookieParam("SESSION_COOKIE") int sessionId) throws SQLException {
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (user.getRole().equals("admin")) {
+            return Response.ok(userRepository.getAllClients()).build();
+        } else {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
+        }
+    }
+
+    @DELETE
+    @Path("/delete/{id}")
+    public Response deleteUser(@CookieParam("SESSION_COOKIE") int sessionId, @PathParam("id") int id) throws SQLException {
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (user.getRole().equals("admin")) {
+            userRepository.deleteUser(id);
+            return Response.ok().build();
+        } else {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
         }
     }
 }
