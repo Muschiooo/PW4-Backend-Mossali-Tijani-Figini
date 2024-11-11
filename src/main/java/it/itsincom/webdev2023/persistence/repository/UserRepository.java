@@ -154,18 +154,7 @@ public class UserRepository {
         return null;
     }
 
-    public void updateUser(User user) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "UPDATE user SET verification = ? WHERE id = ?";
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setString(1, user.getVerification());
-                statement.setInt(2, user.getId());
-                statement.executeUpdate();
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException("Error updating user in the database", e);
-        }
-    }
+
 
     public User getAdmin() {
         try (Connection connection = dataSource.getConnection()) {
@@ -190,5 +179,17 @@ public class UserRepository {
             throw new RuntimeException("Error retrieving admin user", e);
         }
         return null;
+    }
+
+    public void verifyUser(int id) {
+        try (Connection connection = dataSource.getConnection()) {
+            String sql = "UPDATE user SET verification = 'verified', verification_token = '' WHERE id = ?";
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, id);
+                statement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Error verifying user", e);
+        }
     }
 }

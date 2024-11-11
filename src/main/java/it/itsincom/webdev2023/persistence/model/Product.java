@@ -4,6 +4,7 @@ public class Product {
     private int id;
     private String name;
     private String description;
+    private String ingredients;
     private double price;
     private int stock;
     private String image;
@@ -31,6 +32,14 @@ public class Product {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getIngredients() {
+        return ingredients;
+    }
+
+    public void setIngredients(String ingredients) {
+        this.ingredients = ingredients;
     }
 
     public double getPrice() {

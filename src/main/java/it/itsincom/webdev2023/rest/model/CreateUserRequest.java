@@ -7,7 +7,6 @@ public class CreateUserRequest {
     private String email;
     private String phoneNumber;
     private String role;
-
     private String verification;
     private String verificationToken;
 

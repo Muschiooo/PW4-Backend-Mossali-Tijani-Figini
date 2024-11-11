@@ -33,7 +33,6 @@ public class AuthenticationService {
     @Inject
     MailService mailService;
 
-
     public int login(String email, String password) throws NotVerifiedException, WrongCredentialException, SessionCreatedException {
         String hash = hashCalculator.calculateHash(password);
         Optional<User> maybeUser = userRepository.findByCredentials(email, hash);
@@ -59,7 +58,7 @@ public class AuthenticationService {
         }
     }
 
-    public CreateUserResponse register(CreateUserRequest userRequest) {
+    public CreateUserResponse register(CreateUserRequest userRequest)  throws SQLException {
         try {
             String password = userRequest.getPassword();
             String hash = hashCalculator.calculateHash(password);
@@ -77,13 +76,12 @@ public class AuthenticationService {
             User createdUser = userRepository.createUser(user);
 
             createdUser.setVerificationToken(token);
-            userRepository.updateUser(createdUser);
 
             String mailText = "Ciao " + createdUser.getName() + ",\n"
                     + "Benvenuto in Pasticceria C'est la Vie! Per favore, clicca sul link sottostante per verificare il tuo account.\n"
                     + "Il tuo codice di verifica è: " + token + "\n"
                     + "Segui le istruzioni sul sito, inserisci il codice di verifica dell'account ed il gioco è fatto!\n"
-                    + "http://localhost:8080/verify";
+                    + "http://localhost:3000/verify";
 
             mailService.sendVerificationEmail(createdUser.getEmail(), createdUser.getName(),  mailText);
 
