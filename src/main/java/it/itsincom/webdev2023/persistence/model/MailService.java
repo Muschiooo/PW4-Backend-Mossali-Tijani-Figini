@@ -12,7 +12,7 @@ public class MailService {
     Mailer mailer;
 
     public void sendVerificationEmail(String email, String subject, String body) {
-        Mail mail = Mail.withText(email, subject, body); // Ensure the email variable is not null
+        Mail mail = Mail.withText(email, subject, body);
         mailer.send(mail);
     }
 

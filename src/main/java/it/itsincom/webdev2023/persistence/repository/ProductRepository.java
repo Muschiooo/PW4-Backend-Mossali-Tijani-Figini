@@ -141,11 +141,11 @@ public class ProductRepository {
             statement.setString(1, product.getName());
             statement.setString(2, product.getDescription());
             statement.setString(3, product.getIngredients());
-            statement.setDouble(3, product.getPrice());
-            statement.setInt(4, product.getStock());
-            statement.setString(5, product.getImage());
-            statement.setString(6, calculateAvailability(product.getStock()));
-            statement.setInt(7, product.getId());
+            statement.setDouble(4, product.getPrice()); // Corrected index
+            statement.setInt(5, product.getStock());
+            statement.setString(6, product.getImage());
+            statement.setString(7, calculateAvailability(product.getStock()));
+            statement.setInt(8, product.getId()); // Corrected index
             statement.executeUpdate();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error updating product in the database", e);
@@ -154,7 +154,6 @@ public class ProductRepository {
         return product;
     }
 
-    // Cancella un prodotto per nome
     public void deleteProduct(int id) {
         String sql = "DELETE FROM warehouse.product WHERE id = ?";
 

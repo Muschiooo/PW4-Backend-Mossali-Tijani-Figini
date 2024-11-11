@@ -43,22 +43,31 @@ public class OrderService {
             String productId = entry.getKey();
             int requestedQuantity = entry.getValue().getQuantity();
 
-            Product product = productRepository.findProductById(Integer.parseInt(productId));
+            try {
+                int productIdInt = Integer.parseInt(productId);
+                Product product = productRepository.findProductById(productIdInt);
 
-            if (product == null || product.getStock() < requestedQuantity) {
-                System.out.println("Product not available or insufficient stock for product ID: " + productId);
+                if (product == null || product.getStock() < requestedQuantity) {
+                    System.out.println("Prodotto non disponibile o stock insufficiente per l'ID: " + productId);
+                    return false;
+                } else {
+                    product.setStock(product.getStock() - requestedQuantity);
+                    productRepository.updateProduct(product);
+                }
+
+                ProductDetail orderDetail = new ProductDetail();
+                orderDetail.setName(product.getName());
+                orderDetail.setPrice(product.getPrice());
+                orderDetail.setQuantity(requestedQuantity);
+                order.addOrderDetail(productId, orderDetail);
+
+                totalPrice += product.getPrice() * requestedQuantity;
+            } catch (NumberFormatException e) {
+                System.out.println("Errore: l'ID del prodotto non è valido (non è un numero) - " + productId);
                 return false;
             }
-
-            ProductDetail orderDetail = new ProductDetail();
-            orderDetail.setName(product.getName());
-            orderDetail.setPrice(product.getPrice());
-            orderDetail.setQuantity(requestedQuantity);
-
-            order.addOrderDetail(productId, orderDetail);
-
-            totalPrice += product.getPrice() * requestedQuantity;
         }
+
 
         order.setTotalPrice(totalPrice);
         order.setStatus("pending");
@@ -103,14 +112,11 @@ public class OrderService {
         java.util.Calendar calendar = java.util.Calendar.getInstance();
 
         if (lastOrder != null && lastOrder.getDeliverDate() != null) {
+            //control if the last delivery da
             java.util.Date lastDeliveryDate = lastOrder.getDeliverDate();
 
             calendar.setTime(lastDeliveryDate);
             calendar.add(java.util.Calendar.MINUTE, 10);
-
-            if (proposedDate.before(calendar.getTime())) {
-                proposedDate = calendar.getTime();
-            }
         } else {
             calendar.setTime(proposedDate);
         }

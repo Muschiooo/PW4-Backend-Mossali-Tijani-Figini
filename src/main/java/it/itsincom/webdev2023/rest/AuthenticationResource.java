@@ -68,9 +68,10 @@ public class AuthenticationResource {
             int session = authenticationService.login(email, password);
             User user = userRepository.getUserByEmail(email);  // Recupera l'utente autenticato
             NewCookie sessionCookie = new NewCookie.Builder("SESSION_COOKIE")
-                    .path("/")
                     .value(String.valueOf(session))
+                    .path("/")
                     .build();
+
 
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("message", "Login effettuato con successo");
@@ -113,6 +114,7 @@ public class AuthenticationResource {
     @Path("/profile")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getProfile(@CookieParam("SESSION_COOKIE") int sessionId) {
+        System.out.println("Session ID ricevuto: " + sessionId);  // Aggiungi questo log
         try {
             CreateUserResponse user = authenticationService.getProfile(sessionId);
             return Response.ok(user).build();

@@ -42,6 +42,7 @@ public class OrderMongoRepository {
         for (Map.Entry<String, ProductDetail> entry : details.entrySet()) {
             Document detailDoc = new Document()
                     .append("productId", entry.getKey())
+                    .append("name", entry.getValue().getName())
                     .append("quantity", entry.getValue().getQuantity())
                     .append("price", entry.getValue().getPrice());
             detailsList.add(detailDoc);
@@ -90,6 +91,7 @@ public class OrderMongoRepository {
                         Product product = productRepository.findProductById(Integer.parseInt(productId));
                         if (product != null) {
                             ProductDetail detail = new ProductDetail();
+                            detail.setName(detailDoc.getString("name"));
                             detail.setQuantity(detailDoc.getInteger("quantity"));
                             detail.setPrice(detailDoc.getDouble("price"));
                             detail.setName(product.getName());
@@ -135,6 +137,7 @@ public class OrderMongoRepository {
                     Product product = productRepository.findProductById(Integer.parseInt(productId));
                     if (product != null) {
                         ProductDetail detail = new ProductDetail();
+                        detail.setName(detailDoc.getString("name"));
                         detail.setQuantity(detailDoc.getInteger("quantity"));
                         detail.setPrice(detailDoc.getDouble("price"));
                         detailsMap.put(productId, detail);
@@ -172,12 +175,6 @@ public class OrderMongoRepository {
         collection.deleteOne(new Document("_id", order.getId()));
     }
 
-    public boolean exists(ObjectId id) {
-        MongoCollection<Document> collection = getOrdersCollection();
-        Document document = collection.find(new Document("_id", id)).first();
-        return document != null;
-    }
-
     public List<OrderMongo> findByUserEmail(String email) {
         MongoCollection<Document> collection = getOrdersCollection();
         List<OrderMongo> orders = new ArrayList<>();
@@ -191,12 +188,12 @@ public class OrderMongoRepository {
             order.setDeliverDate(document.getDate("deliverDate"));
             order.setStatus(document.getString("status"));
 
-            // Adatta la lettura dei dettagli come una lista
             List<Document> detailsList = (List<Document>) document.get("details");
             Map<String, ProductDetail> detailsMap = new HashMap<>();
             for (Document detailDoc : detailsList) {
                 String productId = detailDoc.getString("productId");
                 ProductDetail detail = new ProductDetail();
+                detail.setName(detailDoc.getString("name"));
                 detail.setQuantity(detailDoc.getInteger("quantity"));
                 detail.setPrice(detailDoc.getDouble("price"));
                 detailsMap.put(productId, detail);
@@ -234,6 +231,7 @@ public class OrderMongoRepository {
         for (Document detailDoc : detailsList) {
             String productId = detailDoc.getString("productId");
             ProductDetail detail = new ProductDetail();
+            detail.setName(detailDoc.getString("name"));
             detail.setQuantity(detailDoc.getInteger("quantity"));
             detail.setPrice(detailDoc.getDouble("price"));
             detailsMap.put(productId, detail);

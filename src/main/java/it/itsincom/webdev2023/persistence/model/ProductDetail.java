@@ -4,7 +4,7 @@ import io.quarkus.mongodb.panache.common.MongoEntity;
 
 @MongoEntity(collection="order_details")
 public class ProductDetail {
-    private String productId;  // Aggiungi il campo productId
+    private String productId;
     private String name;
     private int quantity;
     private double price;
