@@ -1,5 +1,8 @@
 package it.itsincom.webdev2023.service;
 
+import com.twilio.Twilio;
+import com.twilio.rest.api.v2010.account.Message;
+import com.twilio.type.PhoneNumber;
 import it.itsincom.webdev2023.persistence.model.MailService;
 import it.itsincom.webdev2023.persistence.model.Session;
 import it.itsincom.webdev2023.persistence.model.User;
@@ -12,6 +15,7 @@ import it.itsincom.webdev2023.service.exceptions.SessionCreatedException;
 import it.itsincom.webdev2023.service.exceptions.WrongCredentialException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 
 import java.sql.SQLException;
@@ -25,13 +29,21 @@ public class AuthenticationService {
     @Inject
     UserRepository userRepository;
     @Inject
-     HashCalculator hashCalculator;
+    HashCalculator hashCalculator;
     @Inject
     SessionRepository sessionRepository;
     @Inject
     UserService userService;
     @Inject
     MailService mailService;
+    @ConfigProperty(name = "twilio.account.sid")
+    String twilioAccountSid;
+
+    @ConfigProperty(name = "twilio.auth.token")
+    String twilioAuthToken;
+
+    @ConfigProperty(name = "twilio.phone.number")
+    String twilioPhoneNumber;
 
     public int login(String email, String password) throws NotVerifiedException, WrongCredentialException, SessionCreatedException {
         String hash = hashCalculator.calculateHash(password);
@@ -58,7 +70,7 @@ public class AuthenticationService {
         }
     }
 
-    public CreateUserResponse register(CreateUserRequest userRequest)  throws SQLException {
+    public CreateUserResponse register(CreateUserRequest userRequest) throws SQLException {
         try {
             String password = userRequest.getPassword();
             String hash = hashCalculator.calculateHash(password);
@@ -76,6 +88,17 @@ public class AuthenticationService {
             User createdUser = userRepository.createUser(user);
 
             createdUser.setVerificationToken(token);
+
+//            Twilio.init(twilioAccountSid, twilioAuthToken);
+//
+//            String smsText = "Ciao " + user.getName() + ", il tuo codice di verifica per l'ordine è: " + token;
+//
+//            Message m = Message.creator(
+//                    new PhoneNumber(user.getPhoneNumber()),
+//                    new PhoneNumber(twilioPhoneNumber),
+//                    smsText
+//            ).create();
+//            System.out.println("Codice di verifica inviato via SMS: " + token);
 
             String mailText = "Ciao " + createdUser.getName() + ",\n"
                     + "Benvenuto in Pasticceria C'est la Vie! Per favore, clicca sul link sottostante per verificare il tuo account.\n"

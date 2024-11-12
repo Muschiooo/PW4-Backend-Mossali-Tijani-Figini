@@ -10,6 +10,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.bson.types.ObjectId;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -87,7 +89,7 @@ public class OrderResource {
 
     @DELETE
     @Path("{id}")
-    public Response deleteOrder( @PathParam("id") String id) {
+    public Response deleteOrder(@PathParam("id") String id) {
         boolean success = orderService.deleteOrder(id);
         if (success) {
             return Response.ok("Order deleted successfully.").build();
@@ -127,5 +129,37 @@ public class OrderResource {
     public Response getOrdersByUser(@PathParam("email") String email) {
         List<OrderMongo> orders = orderService.getOrdersByUser(email);
         return Response.ok(orders).build();
+    }
+
+    @GET
+    @Path("/date/{date}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getOrdersByDate(@CookieParam("SESSION_COOKIE") int sessionId, @PathParam("date") String date) throws SQLException {
+
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (user.getRole().equals("admin")) {
+            List<OrderMongo> orders = orderService.getOrdersByDate(date);
+            return Response.ok(orders).build();
+        } else {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
+        }
+    }
+
+    @GET
+    @Path("/date/{date}/export")
+    @Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public Response exportOrdersByDateToExcel(@CookieParam("SESSION_COOKIE") int sessionId, @PathParam("date") String date) throws SQLException, IOException {
+        CreateUserResponse user = authenticationService.getProfile(sessionId);
+        if (!user.getRole().equals("admin")) {
+            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
+        }
+
+        // Generate Excel file from orders data
+        ByteArrayOutputStream outputStream = orderService.getExcel(date);
+
+        // Return the Excel file as a response
+        return Response.ok(outputStream.toByteArray())
+                .header("Content-Disposition", "attachment; filename=orders_" + date + ".xlsx")
+                .build();
     }
 }

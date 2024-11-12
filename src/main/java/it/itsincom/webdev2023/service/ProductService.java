@@ -5,6 +5,7 @@ import it.itsincom.webdev2023.persistence.repository.ProductRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.io.ByteArrayOutputStream;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -25,19 +26,23 @@ public class ProductService {
         return productRepository.findProductByName(name);
     }
 
-   public List<Product> getAllProducts() {
+    public List<Product> getAllProducts() {
         return productRepository.getAllProducts();
-   }
+    }
 
     public void updateProductStock(Product product) throws SQLException {
         productRepository.updateProductStock(product);
     }
 
-   public Product updateProduct(Product product) {
+    public Product updateProduct(Product product) {
         return productRepository.updateProduct(product);
-   }
+    }
 
     public void deleteProduct(int id) {
-          productRepository.deleteProduct(id);
+        productRepository.deleteProduct(id);
+    }
+
+    public ByteArrayOutputStream getExcel() {
+        return productRepository.getExcel();
     }
 }

@@ -1,10 +1,16 @@
 package it.itsincom.webdev2023.persistence.repository;
 
+
 import it.itsincom.webdev2023.persistence.model.Product;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import javax.sql.DataSource;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,7 +78,6 @@ public class ProductRepository {
         return null;
     }
 
-    // Aggiorna stock e disponibilità di un prodotto
     public void updateProductStock(Product product) {
         String sql = "UPDATE warehouse.product SET stock = ?, availability = ? WHERE id = ?";
 
@@ -168,12 +173,10 @@ public class ProductRepository {
         }
     }
 
-    // Helper per calcolare la disponibilità
     private String calculateAvailability(int stock) {
         return stock > 0 ? "available" : "out of stock";
     }
 
-    // Helper per mappare il ResultSet su un oggetto Product
     private Product mapResultSetToProduct(ResultSet resultSet) throws SQLException {
         Product product = new Product();
         product.setId(resultSet.getInt("id"));
@@ -186,4 +189,49 @@ public class ProductRepository {
         product.setAvailability(resultSet.getString("availability"));
         return product;
     }
+
+    public ByteArrayOutputStream getExcel() {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Products");
+
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            // Create header row
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"Id", "Name", "Price", "Stock"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Fill data rows
+            int rowNum = 1;
+            for (Product product : getAllProducts()) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(product.getId());
+                row.createCell(1).setCellValue(product.getName());
+                row.createCell(2).setCellValue(product.getPrice());
+                row.createCell(3).setCellValue(product.getStock());
+            }
+
+            // Auto-size columns
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            // Write workbook to the output stream
+            workbook.write(outputStream);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return outputStream;
+    }
+
 }

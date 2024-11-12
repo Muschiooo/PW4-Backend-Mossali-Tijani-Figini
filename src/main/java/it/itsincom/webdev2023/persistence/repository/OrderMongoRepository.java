@@ -1,7 +1,6 @@
 package it.itsincom.webdev2023.persistence.repository;
 
 import com.mongodb.client.FindIterable;
-import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
 import it.itsincom.webdev2023.persistence.model.OrderMongo;
 import it.itsincom.webdev2023.persistence.model.Product;
@@ -15,12 +14,21 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.Document;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static com.mongodb.client.model.Filters.*;
-import static com.mongodb.client.model.Sorts.descending;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.util.List;
+
 
 @ApplicationScoped
 public class OrderMongoRepository {
@@ -248,4 +256,137 @@ public class OrderMongoRepository {
         System.out.println(formattedDate);
         return formattedDate;
     }
+
+    public List<OrderMongo> findByDateRange(String date) {
+        if (date == null || date.isEmpty()) {
+            throw new IllegalArgumentException("Date parameter cannot be null or empty");
+        }
+
+        MongoCollection<Document> collection = getOrdersCollection();
+        List<OrderMongo> orders = new ArrayList<>();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(date, formatter);
+
+        ZonedDateTime startDate = localDate.atStartOfDay(ZoneId.systemDefault());
+        ZonedDateTime endDate = startDate.plusDays(1).minusSeconds(1);
+
+        for (Document document : collection.find(and(
+                gte("deliverDate", Date.from(startDate.toInstant())),
+                lte("deliverDate", Date.from(endDate.toInstant()))
+        ))) {
+            OrderMongo order = new OrderMongo();
+            order.setId(document.getObjectId("_id"));
+            order.setUserEmail(document.getString("userEmail"));
+            order.setComment(document.getString("comment"));
+            order.setTotalPrice(document.getDouble("totalPrice"));
+            order.setOrderDate(document.getDate("orderDate"));
+            order.setDeliverDate(document.getDate("deliverDate"));
+            order.setStatus(document.getString("status"));
+
+            List<Document> detailsList = (List<Document>) document.get("details");
+            Map<String, ProductDetail> detailsMap = new HashMap<>();
+            for (Document detailDoc : detailsList) {
+                String productId = detailDoc.getString("productId");
+                ProductDetail detail = new ProductDetail();
+                detail.setName(detailDoc.getString("name"));
+                detail.setQuantity(detailDoc.getInteger("quantity"));
+                detail.setPrice(detailDoc.getDouble("price"));
+                detailsMap.put(productId, detail);
+            }
+            order.setDetails(detailsMap);
+            orders.add(order);
+        }
+        return orders;
+    }
+
+
+    public ByteArrayOutputStream getExcel(String date) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Orders");
+
+            // Define header styles
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            // Define status styles
+            CellStyle acceptedStyle = workbook.createCellStyle();
+            acceptedStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+            acceptedStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            CellStyle pendingStyle = workbook.createCellStyle();
+            pendingStyle.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+            pendingStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            CellStyle deliveredStyle = workbook.createCellStyle();
+            deliveredStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+            deliveredStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
+            // Create header row
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"Order ID", "User Email", "Total Price", "Order Date", "Deliver Date", "Status"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            // Date formatter for display
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+            // Fill data rows
+            int rowNum = 1;
+            for (OrderMongo order : findByDateRange(date)) {
+                Row row = sheet.createRow(rowNum++);
+
+                row.createCell(0).setCellValue(order.getId().toString());
+                row.createCell(1).setCellValue(order.getUserEmail());
+                row.createCell(2).setCellValue(order.getTotalPrice());
+                row.createCell(3).setCellValue(order.getOrderDate().toInstant().atZone(ZoneId.systemDefault()).format(dateFormatter));
+                row.createCell(4).setCellValue(order.getDeliverDate().toInstant().atZone(ZoneId.systemDefault()).format(dateFormatter));
+
+                // Set cell style based on status
+                Cell statusCell = row.createCell(5);
+                statusCell.setCellValue(order.getStatus());
+                switch (order.getStatus().toLowerCase()) {
+                    case "accepted":
+                        statusCell.setCellStyle(acceptedStyle);
+                        break;
+                    case "pending":
+                        statusCell.setCellStyle(pendingStyle);
+                        break;
+                    case "delivered":
+                        statusCell.setCellStyle(deliveredStyle);
+                        break;
+                    default:
+                        // Leave it with the default style if no match
+                        break;
+                }
+
+                // Add products without individual prices
+                int detailCol = 6; // Start column for product details
+                for (ProductDetail detail : order.getDetails().values()) {
+                    Cell productNameCell = row.createCell(detailCol++);
+                    productNameCell.setCellValue(detail.getName());
+
+                    Cell quantityCell = row.createCell(detailCol++);
+                    quantityCell.setCellValue(detail.getQuantity());
+                }
+            }
+
+            for (int i = 0; i < headers.length + 10; i++) { // Adjust "+10" based on expected number of product columns
+                sheet.autoSizeColumn(i);
+            }
+
+            // Write workbook to the output stream
+            workbook.write(outputStream);
+        }
+
+        return outputStream;
+    }
 }
+

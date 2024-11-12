@@ -8,7 +8,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.bson.types.ObjectId;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -245,5 +248,13 @@ public class OrderService {
 
     public List<OrderMongo> getOrdersByUser(String email) {
         return orderMongoRepository.findByUserEmail(email);
+    }
+
+    public List<OrderMongo> getOrdersByDate(String date) {
+        return orderMongoRepository.findByDateRange(date);
+    }
+
+    public ByteArrayOutputStream getExcel(String date) throws IOException {
+        return  orderMongoRepository. getExcel(date);
     }
 }
