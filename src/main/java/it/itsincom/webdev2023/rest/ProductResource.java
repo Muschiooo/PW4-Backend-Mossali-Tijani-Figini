@@ -10,7 +10,6 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import java.io.ByteArrayOutputStream;
 import java.sql.SQLException;
 
 
@@ -40,28 +39,6 @@ public class ProductResource {
     public Response getAllProducts() {
         return Response.ok(productService.getAllProducts()).build();
     }
-
-    @GET
-    @Path("/export")
-    @Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    public Response getAllProductsToExcel(@CookieParam("SESSION_COOKIE") int sessionId) throws SQLException {
-        CreateUserResponse user = authenticationService.getProfile(sessionId);
-        if (!user.getRole().equals("admin")) {
-            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
-        } else {
-            try {
-                ByteArrayOutputStream excel = productService.getExcel();
-                byte[] excelBytes = excel.toByteArray();
-                return Response.ok(excelBytes)
-                        .header("Content-Disposition", "attachment; filename=products.xlsx")
-                        .build();
-            } catch (Exception e) {
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Error exporting products to Excel").build();
-            }
-        }
-    }
-
-
 
     @GET
     @Path("/{id}")

@@ -29,12 +29,18 @@ public class OrderResource {
     public Response createOrder(OrderMongo order) throws SQLException {
         boolean success = orderService.createOrder(order);
         if (success) {
-            return Response.ok("Order created successfully.").build();
+            // Send JSON response
+            return Response.ok("{\"message\":\"Order created successfully.\"}")
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
         } else {
-            return Response.status(Response.Status.BAD_REQUEST).entity("Error creating order.").build();
-
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"Error creating order.\"}")
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
         }
     }
+
 
     @PUT
     @Path("/{id}")

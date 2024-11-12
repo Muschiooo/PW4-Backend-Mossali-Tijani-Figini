@@ -165,7 +165,7 @@ public class ProductRepository {
         try (Connection connection = dataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
-            statement.setString(1, "id");
+            statement.setInt(1,id);
             statement.executeUpdate();
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error deleting product from the database", e);
