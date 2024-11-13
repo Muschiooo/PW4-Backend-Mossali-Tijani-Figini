@@ -35,17 +35,17 @@ public class ProductRepository {
             statement.setString(1, product.getName());
             statement.setString(2, product.getDescription());
             statement.setString(3, product.getIngredients());
-            statement.setDouble(3, product.getPrice());
-            statement.setInt(4, product.getStock());
-            statement.setString(5, product.getImage());
-            statement.setString(6, calculateAvailability(product.getStock()));  // Usare metodo helper
+            statement.setDouble(4, product.getPrice());
+            statement.setInt(5, product.getStock());
+            statement.setString(6, product.getImage());
+            statement.setString(7, calculateAvailability(product.getStock()));
+
 
             int affectedRows = statement.executeUpdate();
             if (affectedRows == 0) {
                 throw new SQLException("Creating product failed, no rows affected.");
             }
 
-            // Recupera l'ID generato automaticamente
             try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
                     product.setId(generatedKeys.getInt(1));

@@ -122,7 +122,7 @@ public class ProductResource {
             }
             updatedProduct.setId(product.getId());
             productService.updateProduct(updatedProduct);
-            return Response.ok().build();
+            return Response.ok(updatedProduct).build();
         } else {
             return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
         }

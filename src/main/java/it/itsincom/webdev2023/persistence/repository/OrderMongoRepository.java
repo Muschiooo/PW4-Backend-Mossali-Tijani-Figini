@@ -3,7 +3,6 @@ package it.itsincom.webdev2023.persistence.repository;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.model.Sorts;
 import it.itsincom.webdev2023.persistence.model.OrderMongo;
-import it.itsincom.webdev2023.persistence.model.Product;
 import it.itsincom.webdev2023.persistence.model.ProductDetail;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -36,195 +35,12 @@ public class OrderMongoRepository {
     @Inject
     MongoClient mongoClient;
 
-    @Inject
-    ProductRepository productRepository;
-
     private MongoCollection<Document> getOrdersCollection() {
         MongoDatabase database = mongoClient.getDatabase("pasticceria");
         return database.getCollection("orders");
     }
 
-    // Metodo per convertire i dettagli in una lista di documenti
-    private List<Document> convertProductDetailsToList(Map<String, ProductDetail> details) {
-        List<Document> detailsList = new ArrayList<>();
-        for (Map.Entry<String, ProductDetail> entry : details.entrySet()) {
-            Document detailDoc = new Document()
-                    .append("productId", entry.getKey())
-                    .append("name", entry.getValue().getName())
-                    .append("quantity", entry.getValue().getQuantity())
-                    .append("price", entry.getValue().getPrice());
-            detailsList.add(detailDoc);
-        }
-        return detailsList;
-    }
-
-    public void save(OrderMongo order) {
-        MongoCollection<Document> collection = getOrdersCollection();
-        Document document = new Document()
-                .append("userEmail", order.getUserEmail())
-                .append("comment", order.getComment())
-                .append("details", convertProductDetailsToList(order.getDetails()))
-                .append("totalPrice", order.getTotalPrice())
-                .append("orderDate", order.getOrderDate())
-                .append("deliverDate", order.getDeliverDate())
-                .append("status", order.getStatus());
-
-        collection.insertOne(document);
-    }
-
-    public List<OrderMongo> findAll() {
-        MongoCollection<Document> collection = getOrdersCollection();
-        List<OrderMongo> orders = new ArrayList<>();
-        FindIterable<Document> findIterable = collection.find();
-
-        for (Document document : findIterable) {
-            OrderMongo order = new OrderMongo();
-
-            order.setId(document.getObjectId("_id"));
-            order.setUserEmail(document.getString("userEmail"));
-            order.setComment(document.getString("comment"));
-            order.setTotalPrice(document.getDouble("totalPrice"));
-            order.setOrderDate(document.getDate("orderDate"));
-            order.setDeliverDate(document.getDate("deliverDate"));
-            order.setStatus(document.getString("status"));
-
-            List<Document> detailsList = (List<Document>) document.get("details");
-            Map<String, ProductDetail> detailsMap = new HashMap<>();
-
-            for (Document detailDoc : detailsList) {
-                String productId = detailDoc.getString("productId");
-
-                if (productId != null && !productId.isEmpty()) {
-                    try {
-                        Product product = productRepository.findProductById(Integer.parseInt(productId));
-                        if (product != null) {
-                            ProductDetail detail = new ProductDetail();
-                            detail.setName(detailDoc.getString("name"));
-                            detail.setQuantity(detailDoc.getInteger("quantity"));
-                            detail.setPrice(detailDoc.getDouble("price"));
-                            detail.setName(product.getName());
-                            detailsMap.put(productId, detail);
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Errore nel recupero del prodotto per productId: " + productId);
-                    }
-                } else {
-                    System.err.println("productId mancante o vuoto per un prodotto.");
-                }
-            }
-            order.setDetails(detailsMap);
-
-            orders.add(order);
-        }
-
-        return orders;
-    }
-
-    public OrderMongo findById(ObjectId id) {
-        MongoCollection<Document> collection = getOrdersCollection();
-        Document document = collection.find(new Document("_id", id)).first();
-        if (document == null) {
-            return null;
-        }
-        OrderMongo order = new OrderMongo();
-        order.setId(document.getObjectId("_id"));
-        order.setUserEmail(document.getString("userEmail"));
-        order.setComment(document.getString("comment"));
-        order.setTotalPrice(document.getDouble("totalPrice"));
-        order.setOrderDate(document.getDate(("orderDate")));
-        order.setDeliverDate(document.getDate("deliverDate"));
-        order.setStatus(document.getString("status"));
-
-        List<Document> detailsList = (List<Document>) document.get("details");
-        Map<String, ProductDetail> detailsMap = new HashMap<>();
-        for (Document detailDoc : detailsList) {
-            String productId = detailDoc.getString("productId");
-
-            if (productId != null && !productId.isEmpty()) {
-                try {
-                    Product product = productRepository.findProductById(Integer.parseInt(productId));
-                    if (product != null) {
-                        ProductDetail detail = new ProductDetail();
-                        detail.setName(detailDoc.getString("name"));
-                        detail.setQuantity(detailDoc.getInteger("quantity"));
-                        detail.setPrice(detailDoc.getDouble("price"));
-                        detailsMap.put(productId, detail);
-                    }
-                } catch (NumberFormatException e) {
-                    System.err.println("Errore nel parsing del productId: " + productId);
-                }
-            } else {
-                System.err.println("productId mancante o vuoto per un prodotto.");
-            }
-        }
-
-        order.setDetails(detailsMap);
-
-        return order;
-    }
-
-    public void update(OrderMongo order) {
-        MongoCollection<Document> collection = getOrdersCollection();
-        Document document = new Document()
-                .append("userEmail", order.getUserEmail())
-                .append("comment", order.getComment())
-                .append("details", convertProductDetailsToList(order.getDetails()))
-                .append("totalPrice", order.getTotalPrice())
-                .append("orderDate", order.getOrderDate())
-                .append("deliverDate", order.getDeliverDate())
-                .append("status", order.getStatus());
-
-        collection.updateOne(new Document("_id", order.getId()), new Document("$set", document));
-    }
-
-
-    public void delete(OrderMongo order) {
-        MongoCollection<Document> collection = getOrdersCollection();
-        collection.deleteOne(new Document("_id", order.getId()));
-    }
-
-    public List<OrderMongo> findByUserEmail(String email) {
-        MongoCollection<Document> collection = getOrdersCollection();
-        List<OrderMongo> orders = new ArrayList<>();
-        for (Document document : collection.find(eq("userEmail", email))) {
-            OrderMongo order = new OrderMongo();
-            order.setId(document.getObjectId("_id"));
-            order.setUserEmail(document.getString("userEmail"));
-            order.setComment(document.getString("comment"));
-            order.setTotalPrice(document.getDouble("totalPrice"));
-            order.setOrderDate(document.getDate(("orderDate")));
-            order.setDeliverDate(document.getDate("deliverDate"));
-            order.setStatus(document.getString("status"));
-
-            List<Document> detailsList = (List<Document>) document.get("details");
-            Map<String, ProductDetail> detailsMap = new HashMap<>();
-            for (Document detailDoc : detailsList) {
-                String productId = detailDoc.getString("productId");
-                ProductDetail detail = new ProductDetail();
-                detail.setName(detailDoc.getString("name"));
-                detail.setQuantity(detailDoc.getInteger("quantity"));
-                detail.setPrice(detailDoc.getDouble("price"));
-                detailsMap.put(productId, detail);
-            }
-            order.setDetails(detailsMap);
-
-            orders.add(order);
-        }
-        return orders;
-    }
-
-    public OrderMongo findLatestDeliveryDate() {
-        MongoCollection<Document> collection = getOrdersCollection();
-
-        Document document = collection
-                .find()
-                .sort(Sorts.descending("deliverDate"))
-                .first();
-
-        if (document == null) {
-            return null;
-        }
-
+    private OrderMongo createOrderFromDocument(Document document) {
         OrderMongo order = new OrderMongo();
         order.setId(document.getObjectId("_id"));
         order.setUserEmail(document.getString("userEmail"));
@@ -249,12 +65,91 @@ public class OrderMongoRepository {
         return order;
     }
 
+    private List<Document> convertProductDetailsToList(Map<String, ProductDetail> details) {
+        List<Document> detailsList = new ArrayList<>();
+        for (Map.Entry<String, ProductDetail> entry : details.entrySet()) {
+            detailsList.add(createDetailDocument(entry.getKey(), entry.getValue()));
+        }
+        return detailsList;
+    }
+
+    private Document createDetailDocument(String productId, ProductDetail detail) {
+        return new Document()
+                .append("productId", productId)
+                .append("name", detail.getName())
+                .append("quantity", detail.getQuantity())
+                .append("price", detail.getPrice());
+    }
+
+    public void save(OrderMongo order) {
+        MongoCollection<Document> collection = getOrdersCollection();
+        Document document = getOrderDocument(order);
+        collection.insertOne(document);
+    }
+
+    private Document getOrderDocument(OrderMongo order) {
+        return new Document()
+                .append("userEmail", order.getUserEmail())
+                .append("comment", order.getComment())
+                .append("details", convertProductDetailsToList(order.getDetails()))
+                .append("totalPrice", order.getTotalPrice())
+                .append("orderDate", order.getOrderDate())
+                .append("deliverDate", order.getDeliverDate())
+                .append("status", order.getStatus());
+    }
+
+    public List<OrderMongo> findAll() {
+        MongoCollection<Document> collection = getOrdersCollection();
+        List<OrderMongo> orders = new ArrayList<>();
+        FindIterable<Document> findIterable = collection.find();
+
+        for (Document document : findIterable) {
+            orders.add(createOrderFromDocument(document));
+        }
+
+        return orders;
+    }
+
+    public OrderMongo findById(ObjectId id) {
+        MongoCollection<Document> collection = getOrdersCollection();
+        Document document = collection.find(new Document("_id", id)).first();
+        return document != null ? createOrderFromDocument(document) : null;
+    }
+
+    public void update(OrderMongo order) {
+        MongoCollection<Document> collection = getOrdersCollection();
+        Document document = getOrderDocument(order);
+        collection.updateOne(new Document("_id", order.getId()), new Document("$set", document));
+    }
+
+    public void delete(OrderMongo order) {
+        MongoCollection<Document> collection = getOrdersCollection();
+        collection.deleteOne(new Document("_id", order.getId()));
+    }
+
+    public List<OrderMongo> findByUserEmail(String email) {
+        MongoCollection<Document> collection = getOrdersCollection();
+        List<OrderMongo> orders = new ArrayList<>();
+        for (Document document : collection.find(eq("userEmail", email))) {
+            orders.add(createOrderFromDocument(document));
+        }
+        return orders;
+    }
+
+    public OrderMongo findLatestDeliveryDate() {
+        MongoCollection<Document> collection = getOrdersCollection();
+        Document document = collection
+                .find()
+                .sort(Sorts.descending("deliverDate"))
+                .first();
+
+        return document != null ? createOrderFromDocument(document) : null;
+    }
+
     public String dateTimeFormatter(Date date) {
-        ZonedDateTime dateTime = ZonedDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault());
+        ZonedDateTime dateTime = ZonedDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd 'alle ore' HH.mm");
-        String formattedDate = dateTime.format(formatter);
-        System.out.println(formattedDate);
-        return formattedDate;
+        return dateTime.format(formatter);
     }
 
     public List<OrderMongo> findByDateRange(String date) {
@@ -264,7 +159,6 @@ public class OrderMongoRepository {
 
         MongoCollection<Document> collection = getOrdersCollection();
         List<OrderMongo> orders = new ArrayList<>();
-
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate localDate = LocalDate.parse(date, formatter);
 
@@ -275,31 +169,10 @@ public class OrderMongoRepository {
                 gte("deliverDate", Date.from(startDate.toInstant())),
                 lte("deliverDate", Date.from(endDate.toInstant()))
         ))) {
-            OrderMongo order = new OrderMongo();
-            order.setId(document.getObjectId("_id"));
-            order.setUserEmail(document.getString("userEmail"));
-            order.setComment(document.getString("comment"));
-            order.setTotalPrice(document.getDouble("totalPrice"));
-            order.setOrderDate(document.getDate("orderDate"));
-            order.setDeliverDate(document.getDate("deliverDate"));
-            order.setStatus(document.getString("status"));
-
-            List<Document> detailsList = (List<Document>) document.get("details");
-            Map<String, ProductDetail> detailsMap = new HashMap<>();
-            for (Document detailDoc : detailsList) {
-                String productId = detailDoc.getString("productId");
-                ProductDetail detail = new ProductDetail();
-                detail.setName(detailDoc.getString("name"));
-                detail.setQuantity(detailDoc.getInteger("quantity"));
-                detail.setPrice(detailDoc.getDouble("price"));
-                detailsMap.put(productId, detail);
-            }
-            order.setDetails(detailsMap);
-            orders.add(order);
+            orders.add(createOrderFromDocument(document));
         }
         return orders;
     }
-
 
     public ByteArrayOutputStream getExcel(String date) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -307,26 +180,11 @@ public class OrderMongoRepository {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Orders");
 
-            // Define header styles
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerStyle.setFont(headerFont);
+            CellStyle headerStyle = createHeaderCellStyle(workbook);
+            CellStyle acceptedStyle = createStatusCellStyle(workbook, IndexedColors.LIGHT_GREEN);
+            CellStyle pendingStyle = createStatusCellStyle(workbook, IndexedColors.LIGHT_ORANGE);
+            CellStyle deliveredStyle = createStatusCellStyle(workbook, IndexedColors.LIGHT_BLUE);
 
-            // Define status styles
-            CellStyle acceptedStyle = workbook.createCellStyle();
-            acceptedStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
-            acceptedStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            CellStyle pendingStyle = workbook.createCellStyle();
-            pendingStyle.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
-            pendingStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            CellStyle deliveredStyle = workbook.createCellStyle();
-            deliveredStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
-            deliveredStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-
-            // Create header row
             Row headerRow = sheet.createRow(0);
             String[] headers = {"Order ID", "User Email", "Total Price", "Order Date", "Deliver Date", "Status"};
             for (int i = 0; i < headers.length; i++) {
@@ -335,58 +193,67 @@ public class OrderMongoRepository {
                 cell.setCellStyle(headerStyle);
             }
 
-            // Date formatter for display
             DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-            // Fill data rows
             int rowNum = 1;
             for (OrderMongo order : findByDateRange(date)) {
                 Row row = sheet.createRow(rowNum++);
-
-                row.createCell(0).setCellValue(order.getId().toString());
-                row.createCell(1).setCellValue(order.getUserEmail());
-                row.createCell(2).setCellValue(order.getTotalPrice());
-                row.createCell(3).setCellValue(order.getOrderDate().toInstant().atZone(ZoneId.systemDefault()).format(dateFormatter));
-                row.createCell(4).setCellValue(order.getDeliverDate().toInstant().atZone(ZoneId.systemDefault()).format(dateFormatter));
-
-                // Set cell style based on status
-                Cell statusCell = row.createCell(5);
-                statusCell.setCellValue(order.getStatus());
-                switch (order.getStatus().toLowerCase()) {
-                    case "accepted":
-                        statusCell.setCellStyle(acceptedStyle);
-                        break;
-                    case "pending":
-                        statusCell.setCellStyle(pendingStyle);
-                        break;
-                    case "delivered":
-                        statusCell.setCellStyle(deliveredStyle);
-                        break;
-                    default:
-                        // Leave it with the default style if no match
-                        break;
-                }
-
-                // Add products without individual prices
-                int detailCol = 6; // Start column for product details
-                for (ProductDetail detail : order.getDetails().values()) {
-                    Cell productNameCell = row.createCell(detailCol++);
-                    productNameCell.setCellValue(detail.getName());
-
-                    Cell quantityCell = row.createCell(detailCol++);
-                    quantityCell.setCellValue(detail.getQuantity());
-                }
+                createOrderRow(row, order, dateFormatter, acceptedStyle, pendingStyle, deliveredStyle);
             }
 
-            for (int i = 0; i < headers.length + 10; i++) { // Adjust "+10" based on expected number of product columns
+            for (int i = 0; i < headers.length + 10; i++) {
                 sheet.autoSizeColumn(i);
             }
 
-            // Write workbook to the output stream
             workbook.write(outputStream);
         }
 
         return outputStream;
     }
-}
 
+    private CellStyle createHeaderCellStyle(Workbook workbook) {
+        CellStyle headerStyle = workbook.createCellStyle();
+        Font headerFont = workbook.createFont();
+        headerFont.setBold(true);
+        headerStyle.setFont(headerFont);
+        return headerStyle;
+    }
+
+    private CellStyle createStatusCellStyle(Workbook workbook, IndexedColors color) {
+        CellStyle statusStyle = workbook.createCellStyle();
+        statusStyle.setFillForegroundColor(color.getIndex());
+        statusStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        return statusStyle;
+    }
+
+    private void createOrderRow(Row row, OrderMongo order, DateTimeFormatter dateFormatter,
+                                CellStyle acceptedStyle, CellStyle pendingStyle, CellStyle deliveredStyle) {
+        row.createCell(0).setCellValue(order.getId().toString());
+        row.createCell(1).setCellValue(order.getUserEmail());
+        row.createCell(2).setCellValue(order.getTotalPrice());
+        row.createCell(3).setCellValue(order.getOrderDate().toInstant().atZone(ZoneId.systemDefault()).format(dateFormatter));
+        row.createCell(4).setCellValue(order.getDeliverDate().toInstant().atZone(ZoneId.systemDefault()).format(dateFormatter));
+
+        Cell statusCell = row.createCell(5);
+        statusCell.setCellValue(order.getStatus());
+        switch (order.getStatus().toLowerCase()) {
+            case "accepted":
+                statusCell.setCellStyle(acceptedStyle);
+                break;
+            case "pending":
+                statusCell.setCellStyle(pendingStyle);
+                break;
+            case "delivered":
+                statusCell.setCellStyle(deliveredStyle);
+                break;
+            default:
+                break;
+        }
+
+        int detailCol = 6;
+        for (ProductDetail detail : order.getDetails().values()) {
+            row.createCell(detailCol++).setCellValue(detail.getName());
+            row.createCell(detailCol++).setCellValue(detail.getQuantity());
+        }
+    }
+}
