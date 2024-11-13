@@ -1,6 +1,7 @@
 package it.itsincom.webdev2023.rest;
 
 import it.itsincom.webdev2023.persistence.model.OrderMongo;
+import it.itsincom.webdev2023.persistence.repository.OrderMongoRepository;
 import it.itsincom.webdev2023.rest.model.CreateUserResponse;
 import it.itsincom.webdev2023.service.AuthenticationService;
 import it.itsincom.webdev2023.service.OrderService;
@@ -13,29 +14,35 @@ import org.bson.types.ObjectId;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 @Path("/api/order")
 public class OrderResource {
-
     @Inject
     OrderService orderService;
-
     @Inject
     AuthenticationService authenticationService;
+    @Inject
+    OrderMongoRepository orderMongoRepository;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response createOrder(OrderMongo order) throws SQLException {
-        boolean success = orderService.createOrder(order);
-        if (success) {
-            // Send JSON response
-            return Response.ok("{\"message\":\"Order created successfully.\"}")
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
-        } else {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\":\"Error creating order.\"}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createOrder(OrderMongo order) {
+        // Use the validateDeliveryDate method from OrderMongoRepository
+        Response validationResponse = orderMongoRepository.validateDeliveryDate(order);
+        if (validationResponse != null) {
+            return validationResponse; // Return validation error if present
+        }
+
+        // If all validations pass, proceed to create the order
+        try {
+            return orderMongoRepository.createNewOrder(order);
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\":\"Errore interno durante la creazione dell'ordine.\"}")
                     .type(MediaType.APPLICATION_JSON)
                     .build();
         }

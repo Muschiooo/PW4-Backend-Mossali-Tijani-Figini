@@ -33,15 +33,6 @@ public class OrderService {
 
         order.setOrderDate(new java.util.Date());
 
-        java.util.Calendar calendar = java.util.Calendar.getInstance();
-        calendar.setTime(order.getOrderDate());
-        calendar.add(java.util.Calendar.DAY_OF_YEAR, 3);
-        java.util.Date proposedDeliveryDate = calendar.getTime();
-
-        proposedDeliveryDate = checkDeliveryDate(proposedDeliveryDate);
-
-        order.setDeliverDate(proposedDeliveryDate);
-
         for (Map.Entry<String, ProductDetail> entry : order.getDetails().entrySet()) {
             String productId = entry.getKey();
             int requestedQuantity = entry.getValue().getQuantity();
@@ -71,38 +62,25 @@ public class OrderService {
             }
         }
 
-
         order.setTotalPrice(totalPrice);
         order.setStatus("pending");
         orderMongoRepository.save(order);
 
         User client = userRepository.getUserByEmail(order.getUserEmail());
-
         String mailText = "Ciao " + client.getName() + ",\n"
                 + "Abbiamo ricevuto il tuo ordine! Qui ci sono i dettagli:\n"
-                + "Hai lasciato una nota per l'ordine: " + order.getComment() + "\n"
-                + "Data di creazione: " + orderMongoRepository.dateTimeFormatter(order.getOrderDate()) + "\n"
-                + "Data di ritiro: " + orderMongoRepository.dateTimeFormatter(order.getDeliverDate()) + "\n"
+                + "Data di consegna: " + orderMongoRepository.dateTimeFormatter(order.getDeliverDate()) + "\n"
                 + "Prezzo totale: " + Math.round(order.getTotalPrice() * 100.0) / 100.0 + "€\n"
-                + "Stato: " + order.getStatus() + "\n"
-                + "Sarai avvisato quando l'ordine verrà accettato e preparato.\n"
-                + "Grazie per aver scelto Pasticceria C'est la Vie!";
+                + "Stato: " + order.getStatus() + "\n";
 
         mailService.sendVerificationEmail(client.getEmail(), client.getName(), mailText);
 
         User admin = userRepository.getAdmin();
-
         String mailTextAdmin = "Ciao " + admin.getName() + ",\n"
                 + "Un nuovo ordine è stato effettuato! Qui ci sono i dettagli:\n"
                 + "Cliente: " + client.getName() + ".\n"
                 + "Email: " + client.getEmail() + "\n"
-                + "Telefono: " + client.getPhoneNumber() + "\n"
-                + "Ha lasciato una nota per l'ordine: " + order.getComment() + "\n"
-                + "Data di creazione: " + orderMongoRepository.dateTimeFormatter(order.getOrderDate()) + "\n"
-                + "Data di ritiro: " + orderMongoRepository.dateTimeFormatter(order.getDeliverDate()) + "\n"
-                + "Prezzo totale: " + Math.round(order.getTotalPrice() * 100.0) / 100.0 + "€\n"
-                + "Stato: " + order.getStatus() + "\n"
-                + "Controlla la dashboard per accettare l'ordine.\n";
+                + "Data di consegna: " + orderMongoRepository.dateTimeFormatter(order.getDeliverDate()) + "\n";
 
         mailService.sendVerificationEmail(admin.getEmail(), admin.getName(), mailTextAdmin);
 
