@@ -3,9 +3,11 @@ package it.itsincom.webdev2023.service;
 import it.itsincom.webdev2023.persistence.model.User;
 import it.itsincom.webdev2023.persistence.repository.UserRepository;
 import it.itsincom.webdev2023.rest.model.CreateUserResponse;
+import it.itsincom.webdev2023.service.exceptions.TokenVerificationException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -13,14 +15,17 @@ import java.util.logging.Logger;
 @ApplicationScoped
 public class UserService {
     private static final Logger LOGGER = Logger.getLogger(UserService.class.getName());
+
     @Inject
     UserRepository userRepository;
 
     public String generateVerificationToken() {
-        return String.valueOf((int) (Math.random() * 900000 + 100000));
+        SecureRandom random = new SecureRandom();
+        int token = random.nextInt(900000) + 100000;
+        return String.valueOf(token);
     }
 
-    public boolean checkToken(String token) {
+    public boolean checkToken(String token) throws TokenVerificationException {
         try {
             LOGGER.log(Level.INFO, "Received token for verification: " + token);
 
@@ -40,12 +45,14 @@ public class UserService {
             }
             return false;
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error verifying token: " + token, e);
-            return false;
+            throw new TokenVerificationException("Unexpected error during token verification", e);
         }
     }
 
     private CreateUserResponse convertToResponse(User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
+        }
         CreateUserResponse response = new CreateUserResponse();
         response.setId(user.getId());
         response.setName(user.getName());
@@ -57,7 +64,6 @@ public class UserService {
 
     public CreateUserResponse getUserById(int userId) throws SQLException {
         User u = userRepository.getUserById(userId);
-        CreateUserResponse ur = convertToResponse(u);
-        return ur;
+        return convertToResponse(u);
     }
 }

@@ -5,10 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -18,56 +15,63 @@ public class UserRepository {
     @Inject
     DataSource dataSource;
 
+    private User mapResultSetToUser(ResultSet resultSet) throws SQLException {
+        User user = new User();
+        user.setId(resultSet.getInt("id"));
+        user.setName(resultSet.getString("name"));
+        user.setEmail(resultSet.getString("email"));
+        user.setPasswordHash(resultSet.getString("password"));
+        user.setPhoneNumber(resultSet.getString("phone"));
+        user.setRole(resultSet.getString("role"));
+        user.setVerification(resultSet.getString("verification"));
+        user.setVerificationToken(resultSet.getString("verification_token"));
+        return user;
+    }
+
+    private Connection getConnection() throws SQLException {
+        return dataSource.getConnection();
+    }
+
     public User createUser(User user) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "INSERT INTO user (name, email, password, phone, role, verification, verification_token) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
-                statement.setString(1, user.getName());
-                statement.setString(2, user.getEmail());
-                statement.setString(3, user.getPasswordHash());
-                statement.setString(4, user.getPhoneNumber());
-                statement.setString(5, "client");
-                statement.setString(6, "pending");
-                statement.setString(7, user.getVerificationToken());
+        String sql = "INSERT INTO user (name, email, password, phone, role, verification, verification_token) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
 
-                int affectedRows = statement.executeUpdate();
-                if (affectedRows == 0) {
-                    throw new SQLException("Creating user failed, no rows affected.");
-                }
+            statement.setString(1, user.getName());
+            statement.setString(2, user.getEmail());
+            statement.setString(3, user.getPasswordHash());
+            statement.setString(4, user.getPhoneNumber());
+            statement.setString(5, "client");
+            statement.setString(6, "pending");
+            statement.setString(7, user.getVerificationToken());
 
-                try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        int id = generatedKeys.getInt(1);
-                        user.setId(id);
-                    }
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Creating user failed, no rows affected.");
+            }
+
+            try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    user.setId(generatedKeys.getInt(1));
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
             throw new RuntimeException("Error creating user in the database", e);
         }
         return user;
     }
 
     public Optional<User> findByCredentials(String email, String hash) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE email = ? AND password = ?";
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setString(1, email);
-                statement.setString(2, hash);
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    if (resultSet.next()) {
-                        User user = new User();
-                        user.setId(resultSet.getInt("id"));
-                        user.setName(resultSet.getString("name"));
-                        user.setEmail(resultSet.getString("email"));
-                        user.setPasswordHash(resultSet.getString("password"));
-                        user.setPhoneNumber(resultSet.getString("phone"));
-                        user.setRole(resultSet.getString("role"));
-                        user.setVerification(resultSet.getString("verification"));
-                        user.setVerificationToken(resultSet.getString("verification_token"));
-                        return Optional.of(user);
-                    }
+        String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE email = ? AND password = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, email);
+            statement.setString(2, hash);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    User user = mapResultSetToUser(resultSet);
+                    return Optional.of(user);
                 }
             }
         } catch (SQLException e) {
@@ -77,77 +81,48 @@ public class UserRepository {
     }
 
     public User getUserById(int userId) throws SQLException {
-        User user = null;
         String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE id = ?";
-
-        try (Connection connection = dataSource.getConnection();
+        try (Connection connection = getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
 
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    user = new User();
-                    user.setId(rs.getInt("id"));
-                    user.setName(rs.getString("name"));
-                    user.setEmail(rs.getString("email"));
-                    user.setPasswordHash(rs.getString("password"));
-                    user.setPhoneNumber(rs.getString("phone"));
-                    user.setRole(rs.getString("role"));
-                    user.setVerification(rs.getString("verification"));
-                    user.setVerificationToken(rs.getString("verification_token"));
+                    return mapResultSetToUser(rs);
                 } else {
                     System.out.println("User not found with id: " + userId);
                 }
             }
         }
-        return user;
+        return null;
     }
 
     public User getUserByEmail(String email) throws SQLException {
-        User user = null;
         String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE email = ?";
-
-        try (Connection connection = dataSource.getConnection();
+        try (Connection connection = getConnection();
              PreparedStatement ps = connection.prepareStatement(sql)) {
 
             ps.setString(1, email);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    user = new User();
-                    user.setId(rs.getInt("id"));
-                    user.setName(rs.getString("name"));
-                    user.setEmail(rs.getString("email"));
-                    user.setPasswordHash(rs.getString("password"));
-                    user.setPhoneNumber(rs.getString("phone"));
-                    user.setRole(rs.getString("role"));
-                    user.setVerification(rs.getString("verification"));
-                    user.setVerificationToken(rs.getString("verification_token"));
+                    return mapResultSetToUser(rs);
                 } else {
-                    System.out.println("User not found with id: " + email);
+                    System.out.println("User not found with email: " + email);
                 }
             }
         }
-        return user;
+        return null;
     }
 
     public User findByVerificationToken(String token) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE verification_token = ?";
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setString(1, token);
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    if (resultSet.next()) {
-                        User user = new User();
-                        user.setId(resultSet.getInt("id"));
-                        user.setName(resultSet.getString("name"));
-                        user.setEmail(resultSet.getString("email"));
-                        user.setPasswordHash(resultSet.getString("password"));
-                        user.setPhoneNumber(resultSet.getString("phone"));
-                        user.setRole(resultSet.getString("role"));
-                        user.setVerification(resultSet.getString("verification"));
-                        user.setVerificationToken(resultSet.getString("verification_token"));
-                        return user;
-                    }
+        String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE verification_token = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, token);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapResultSetToUser(resultSet);
                 }
             }
         } catch (SQLException e) {
@@ -156,25 +131,14 @@ public class UserRepository {
         return null;
     }
 
-
-
     public User getAdmin() {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE role = 'admin'";
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    if (resultSet.next()) {
-                        User user = new User();
-                        user.setId(resultSet.getInt("id"));
-                        user.setName(resultSet.getString("name"));
-                        user.setEmail(resultSet.getString("email"));
-                        user.setPasswordHash(resultSet.getString("password"));
-                        user.setPhoneNumber(resultSet.getString("phone"));
-                        user.setRole(resultSet.getString("role"));
-                        user.setVerification(resultSet.getString("verification"));
-                        user.setVerificationToken(resultSet.getString("verification_token"));
-                        return user;
-                    }
+        String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE role = 'admin'";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return mapResultSetToUser(resultSet);
                 }
             }
         } catch (SQLException e) {
@@ -184,51 +148,40 @@ public class UserRepository {
     }
 
     public void verifyUser(int id) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "UPDATE user SET verification = 'verified', verification_token = '' WHERE id = ?";
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setInt(1, id);
-                statement.executeUpdate();
-            }
+        String sql = "UPDATE user SET verification = 'verified', verification_token = '' WHERE id = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, id);
+            statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error verifying user", e);
         }
     }
 
     public List<User> getAllClients() {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE role = 'client'";
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                try (ResultSet resultSet = statement.executeQuery()) {
+        String sql = "SELECT id, name, email, password, phone, role, verification, verification_token FROM user WHERE role = 'client'";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
 
-                    List<User> users = new ArrayList<>();
-                    while (resultSet.next()) {
-                        User user = new User();
-                        user.setId(resultSet.getInt("id"));
-                        user.setName(resultSet.getString("name"));
-                        user.setEmail(resultSet.getString("email"));
-                        user.setPasswordHash(resultSet.getString("password"));
-                        user.setPhoneNumber(resultSet.getString("phone"));
-                        user.setRole(resultSet.getString("role"));
-                        user.setVerification(resultSet.getString("verification"));
-                        user.setVerificationToken(resultSet.getString("verification_token"));
-                        users.add(user);
-                    }
-                    return users;
-                }
+            List<User> users = new ArrayList<>();
+            while (resultSet.next()) {
+                users.add(mapResultSetToUser(resultSet));
             }
+            return users;
         } catch (SQLException e) {
             throw new RuntimeException("Error retrieving all clients", e);
         }
     }
 
     public void deleteUser(int id) {
-        try (Connection connection = dataSource.getConnection()) {
-            String sql = "DELETE FROM user WHERE id = ?";
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setInt(1, id);
-                statement.executeUpdate();
-            }
+        String sql = "DELETE FROM user WHERE id = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, id);
+            statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Error deleting user", e);
         }

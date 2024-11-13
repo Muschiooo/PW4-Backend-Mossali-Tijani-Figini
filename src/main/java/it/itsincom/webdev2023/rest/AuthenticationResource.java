@@ -9,6 +9,7 @@ import it.itsincom.webdev2023.service.AuthenticationService;
 import it.itsincom.webdev2023.service.UserService;
 import it.itsincom.webdev2023.service.exceptions.NotVerifiedException;
 import it.itsincom.webdev2023.service.exceptions.SessionCreatedException;
+import it.itsincom.webdev2023.service.exceptions.TokenVerificationException;
 import it.itsincom.webdev2023.service.exceptions.WrongCredentialException;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -44,17 +45,13 @@ public class AuthenticationResource {
     @Path("/verify")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response verifyToken(Map<String, String> requestBody) {
+    public Response verifyToken(Map<String, String> requestBody) throws TokenVerificationException {
         String token = requestBody.get("token");
         boolean isVerified = userService.checkToken(token);
-        if (isVerified) {
-            return Response.ok("{\"message\":\"User verified successfully\"}").build();
-        } else {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"message\":\"Invalid or expired token\"}").build();
-        }
+        return isVerified
+                ? Response.ok("{\"message\":\"User verified successfully\"}").build()
+                : Response.status(Response.Status.BAD_REQUEST).entity("{\"message\":\"Invalid or expired token\"}").build();
     }
-
 
     @POST
     @Path("/login")
@@ -64,56 +61,45 @@ public class AuthenticationResource {
         try {
             String email = loginRequest.getEmail();
             String password = loginRequest.getPassword();
-
             int session = authenticationService.login(email, password);
-            User user = userRepository.getUserByEmail(email);  // Recupera l'utente autenticato
+            User user = userRepository.getUserByEmail(email);
+
             NewCookie sessionCookie = new NewCookie.Builder("SESSION_COOKIE")
                     .value(String.valueOf(session))
                     .path("/")
                     .build();
 
-
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("message", "Login effettuato con successo");
             responseBody.put("sessionId", session);
-            responseBody.put("role", user.getRole());  // Aggiungi il ruolo dell'utente alla risposta
+            responseBody.put("role", user.getRole());
 
             return Response.ok(responseBody)
                     .cookie(sessionCookie)
                     .build();
         } catch (NotVerifiedException e) {
-            return Response.status(Response.Status.FORBIDDEN)
-                    .entity(Map.of("message", "Account non verificato"))
-                    .build();
+            return createErrorResponse("Account non verificato", Response.Status.FORBIDDEN);
         } catch (WrongCredentialException e) {
-            return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(Map.of("message", "Credenziali non valide"))
-                    .build();
+            return createErrorResponse("Credenziali non valide", Response.Status.UNAUTHORIZED);
         } catch (SessionCreatedException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("message", "Errore nella creazione della sessione"))
-                    .build();
+            return createErrorResponse("Errore nella creazione della sessione", Response.Status.INTERNAL_SERVER_ERROR);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
-
 
     @DELETE
     @Path("/logout")
     public Response logout(@CookieParam("SESSION_COOKIE") int sessionId) {
         authenticationService.logout(sessionId);
         NewCookie sessionCookie = new NewCookie.Builder("SESSION_COOKIE").path("/").build();
-        return Response.ok()
-                .cookie(sessionCookie)
-                .build();
+        return Response.ok().cookie(sessionCookie).build();
     }
 
     @GET
     @Path("/profile")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getProfile(@CookieParam("SESSION_COOKIE") int sessionId) {
-        System.out.println("Session ID ricevuto: " + sessionId);  // Aggiungi questo log
         try {
             CreateUserResponse user = authenticationService.getProfile(sessionId);
             return Response.ok(user).build();
@@ -126,25 +112,30 @@ public class AuthenticationResource {
     @Path("/clients")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAllClients(@CookieParam("SESSION_COOKIE") int sessionId) throws SQLException {
-        CreateUserResponse user = authenticationService.getProfile(sessionId);
-        if (user.getRole().equals("admin")) {
-            return Response.ok(userRepository.getAllClients()).build();
-        } else {
-            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
-        }
+        return checkAdminRole(sessionId)
+                ? Response.ok(userRepository.getAllClients()).build()
+                : Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
     }
 
     @DELETE
     @Path("/delete/{id}")
     public Response deleteUser(@CookieParam("SESSION_COOKIE") int sessionId, @PathParam("id") int id) throws SQLException {
+        return checkAdminRole(sessionId)
+                ? deleteUserById(id)
+                : Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
+    }
+
+    private Response createErrorResponse(String message, Response.Status status) {
+        return Response.status(status).entity(Map.of("message", message)).build();
+    }
+
+    private boolean checkAdminRole(int sessionId) throws SQLException {
         CreateUserResponse user = authenticationService.getProfile(sessionId);
-        if (user.getRole().equals("admin")) {
-            userRepository.deleteUser(id);
-            return Response.ok().build();
-        } else {
-            return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
-        }
+        return "admin".equals(user.getRole());
+    }
+
+    private Response deleteUserById(int id) throws SQLException {
+        userRepository.deleteUser(id);
+        return Response.ok().build();
     }
 }
-
-

@@ -17,7 +17,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-
 import java.sql.SQLException;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -26,16 +25,22 @@ import java.util.logging.Logger;
 @ApplicationScoped
 public class AuthenticationService {
     private static final Logger LOGGER = Logger.getLogger(AuthenticationService.class.getName());
+
     @Inject
     UserRepository userRepository;
+
     @Inject
     HashCalculator hashCalculator;
+
     @Inject
     SessionRepository sessionRepository;
+
     @Inject
     UserService userService;
+
     @Inject
     MailService mailService;
+
     @ConfigProperty(name = "twilio.account.sid")
     String twilioAccountSid;
 
@@ -44,6 +49,34 @@ public class AuthenticationService {
 
     @ConfigProperty(name = "twilio.phone.number")
     String twilioPhoneNumber;
+
+    private void sendVerificationSms(User user, String token) {
+        try {
+            Twilio.init(twilioAccountSid, twilioAuthToken);
+            String smsText = "Ciao " + user.getName() + ", il tuo codice di verifica per l'ordine è: " + token;
+
+            Message.creator(
+                    new PhoneNumber(user.getPhoneNumber()),
+                    new PhoneNumber(twilioPhoneNumber),
+                    smsText
+            ).create();
+            LOGGER.info("Codice di verifica inviato via SMS: " + token);
+        } catch (Exception e) {
+            LOGGER.severe("Error sending verification SMS: " + e.getMessage());
+        }
+    }
+
+    private CreateUserResponse mapUserToResponse(User user) {
+        CreateUserResponse response = new CreateUserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setPhoneNumber(user.getPhoneNumber());
+        response.setRole(user.getRole());
+        response.setVerification(user.getVerification());
+        response.setVerificationToken(user.getVerificationToken());
+        return response;
+    }
 
     public int login(String email, String password) throws NotVerifiedException, WrongCredentialException, SessionCreatedException {
         String hash = hashCalculator.calculateHash(password);
@@ -87,36 +120,15 @@ public class AuthenticationService {
 
             User createdUser = userRepository.createUser(user);
 
-            createdUser.setVerificationToken(token);
-
-//            Twilio.init(twilioAccountSid, twilioAuthToken);
-//
-//            String smsText = "Ciao " + user.getName() + ", il tuo codice di verifica per l'ordine è: " + token;
-//
-//            Message m = Message.creator(
-//                    new PhoneNumber(user.getPhoneNumber()),
-//                    new PhoneNumber(twilioPhoneNumber),
-//                    smsText
-//            ).create();
-//            System.out.println("Codice di verifica inviato via SMS: " + token);
-
             String mailText = "Ciao " + createdUser.getName() + ",\n"
                     + "Benvenuto in Pasticceria C'est la Vie! Per favore, clicca sul link sottostante per verificare il tuo account.\n"
                     + "Il tuo codice di verifica è: " + token + "\n"
                     + "Segui le istruzioni sul sito, inserisci il codice di verifica dell'account ed il gioco è fatto!\n"
                     + "http://localhost:3000/verify";
 
-            mailService.sendVerificationEmail(createdUser.getEmail(), createdUser.getName(),  mailText);
+            mailService.sendVerificationEmail(createdUser.getEmail(), createdUser.getName(), mailText);
 
-            CreateUserResponse response = new CreateUserResponse();
-            response.setId(createdUser.getId());
-            response.setName(createdUser.getName());
-            response.setEmail(createdUser.getEmail());
-            response.setPhoneNumber(createdUser.getPhoneNumber());
-            response.setRole(createdUser.getRole());
-            response.setVerification(createdUser.getVerification());
-            response.setVerificationToken(createdUser.getVerificationToken());
-            return response;
+            return mapUserToResponse(createdUser);
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error while registering user", e);
@@ -131,15 +143,8 @@ public class AuthenticationService {
     public CreateUserResponse getProfile(int sessionId) throws SQLException {
         Session s = sessionRepository.getSessionById(sessionId);
         int userId = s.getUserId();
-        CreateUserResponse user = userService.getUserById(userId);
+        User user = userRepository.getUserById(userId);
 
-        CreateUserResponse response = new CreateUserResponse();
-        response.setId(user.getId());
-        response.setName(user.getName());
-        response.setEmail(user.getEmail());
-        response.setPhoneNumber(user.getPhoneNumber());
-        response.setRole(user.getRole());
-
-        return response;
+        return mapUserToResponse(user);
     }
 }
