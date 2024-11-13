@@ -19,11 +19,11 @@ public class ProductService {
     }
 
     public Product findProductById(int id) {
-        return productRepository.findProductById(id);
+        return findProductByIdOrName(id, null);
     }
 
     public Product findProductByName(String name) {
-        return productRepository.findProductByName(name);
+        return findProductByIdOrName(0, name);
     }
 
     public List<Product> getAllProducts() {
@@ -44,5 +44,14 @@ public class ProductService {
 
     public ByteArrayOutputStream getExcel() {
         return productRepository.getExcel();
+    }
+
+    private Product findProductByIdOrName(int id, String name) {
+        if (id > 0) {
+            return productRepository.findProductById(id);
+        } else if (name != null && !name.isEmpty()) {
+            return productRepository.findProductByName(name);
+        }
+        return null;
     }
 }
