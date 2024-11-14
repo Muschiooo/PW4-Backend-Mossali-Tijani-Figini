@@ -1,8 +1,5 @@
 package it.itsincom.webdev2023.service;
 
-import com.twilio.Twilio;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
 import it.itsincom.webdev2023.persistence.model.MailService;
 import it.itsincom.webdev2023.persistence.model.Session;
 import it.itsincom.webdev2023.persistence.model.User;
@@ -15,7 +12,6 @@ import it.itsincom.webdev2023.service.exceptions.SessionCreatedException;
 import it.itsincom.webdev2023.service.exceptions.WrongCredentialException;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.sql.SQLException;
 import java.util.Optional;
@@ -97,6 +93,7 @@ public class AuthenticationService {
 
             User createdUser = userRepository.createUser(user);
 
+            //commented because i've got an error about the twilio account information
             //smsService.sendVerificationSms(createdUser.getPhoneNumber(), token);
 
             String mailText = "Ciao " + createdUser.getName() + ",\n"

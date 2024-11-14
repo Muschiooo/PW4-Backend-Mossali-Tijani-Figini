@@ -48,7 +48,7 @@ public class ProductRepository {
     }
 
     public Product findProductByName(String name) {
-        String sql = "SELECT id, name, description, ingredients, price, stock, image, availability FROM warehouse.product WHERE name = ?";
+            String sql = "SELECT id, name, description, ingredients, price, stock, image, availability FROM warehouse.product WHERE name = ?";
         return findProduct(sql, name);
     }
 

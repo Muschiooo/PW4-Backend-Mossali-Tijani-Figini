@@ -1,7 +1,5 @@
 package it.itsincom.webdev2023.persistence.model;
 
-import java.util.List;
-
 public class User {
     private int id;
     private String name;

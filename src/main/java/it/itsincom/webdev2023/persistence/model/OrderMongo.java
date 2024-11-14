@@ -11,7 +11,7 @@ public class OrderMongo {
     public ObjectId id;
     public String userEmail;
     public String comment;
-    public Map<String, ProductDetail> details;  // Dettagli dell'ordine (Map)
+    public Map<String, ProductDetail> details;
     public double totalPrice;
     public Date orderDate;
     public Date deliverDate;
