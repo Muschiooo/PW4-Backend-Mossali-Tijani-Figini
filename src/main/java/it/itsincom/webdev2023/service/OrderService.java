@@ -8,7 +8,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.bson.types.ObjectId;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -32,6 +31,7 @@ public class OrderService {
         double totalPrice = 0.0;
 
         order.setOrderDate(new java.util.Date());
+        orderMongoRepository.isDeliveryDateAvailable(order.deliverDate);
 
         for (Map.Entry<String, ProductDetail> entry : order.getDetails().entrySet()) {
             String productId = entry.getKey();
@@ -85,30 +85,6 @@ public class OrderService {
         mailService.sendVerificationEmail(admin.getEmail(), admin.getName(), mailTextAdmin);
 
         return true;
-    }
-
-    public java.util.Date checkDeliveryDate(java.util.Date proposedDate) {
-        OrderMongo lastOrder = orderMongoRepository.findLatestDeliveryDate();
-
-        java.util.Calendar calendar = java.util.Calendar.getInstance();
-
-        if (lastOrder != null && lastOrder.getDeliverDate() != null) {
-            //control if the last delivery da
-            java.util.Date lastDeliveryDate = lastOrder.getDeliverDate();
-
-            calendar.setTime(lastDeliveryDate);
-            calendar.add(java.util.Calendar.MINUTE, 10);
-        } else {
-            calendar.setTime(proposedDate);
-        }
-
-        int minutes = calendar.get(java.util.Calendar.MINUTE);
-        int remainder = minutes % 10;
-        if (remainder != 0) {
-            calendar.add(java.util.Calendar.MINUTE, 10 - remainder);
-        }
-
-        return calendar.getTime();
     }
 
     private boolean isValidObjectId(String id) {

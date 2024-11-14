@@ -1,75 +1,115 @@
-# demo2
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+# Java Project Documentation 
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+## Structure of REST Resources
 
-## Running the application in dev mode
+### 1. **AuthenticationResource** (`/auth`)
+This resource handles user authentication and management operations.
 
-You can run your application in dev mode that enables live coding using:
+#### Endpoints
+- **POST /register**: Registers a new user.
+  - **Input**: `CreateUserRequest` (JSON)
+  - **Output**: `CreateUserResponse` (JSON)
 
-```shell script
-./mvnw compile quarkus:dev
-```
+- **POST /verify**: Verifies a user's token.
+  - **Input**: `token` (JSON)
+  - **Output**: Success or error message (JSON)
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+- **POST /login**: Logs the user in.
+  - **Input**: `LoginRequest` (JSON)
+  - **Output**: Session details, user role (JSON)
 
-## Packaging and running the application
+- **DELETE /logout**: Logs the user out.
+  - **Input**: `SESSION_COOKIE` (cookie)
+  - **Output**: Empty response
 
-The application can be packaged using:
+- **GET /profile**: Retrieves the authenticated user's profile.
+  - **Input**: `SESSION_COOKIE` (cookie)
+  - **Output**: `CreateUserResponse` (JSON)
 
-```shell script
-./mvnw package
-```
+- **GET /clients**: Retrieves all clients (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie)
+  - **Output**: List of users (JSON)
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+- **DELETE /delete/{id}**: Deletes a specific user (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `id` (path)
+  - **Output**: Empty response
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+### 2. **ProductResource** (`/api/product`)
+This resource manages product operations.
 
-If you want to build an _über-jar_, execute the following command:
+#### Endpoints
+- **POST /**: Creates a new product (admin only).
+  - **Input**: `Product` (JSON)
+  - **Output**: Created `Product` (JSON)
 
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
-```
+- **GET /**: Retrieves all products.
+  - **Output**: List of products (JSON)
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+- **GET /export**: Exports products in Excel format (admin only).
+  - **Output**: Excel file
 
-## Creating a native executable
+- **GET /{id}**: Retrieves a product by ID.
+  - **Input**: `id` (path)
+  - **Output**: `Product` (JSON)
 
-You can create a native executable using:
+- **GET /{name}**: Retrieves a product by name.
+  - **Input**: `name` (path)
+  - **Output**: `Product` (JSON)
 
-```shell script
-./mvnw package -Dnative
-```
+- **PUT /{id}**: Updates the stock of a product (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `id` (path), updated `Product` (JSON)
+  - **Output**: Empty response
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+- **PUT /{name}**: Updates product details (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `name` (path), updated `Product` (JSON)
+  - **Output**: Updated `Product` (JSON)
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
+- **DELETE /{id}**: Deletes a product (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `id` (path)
+  - **Output**: Empty response
 
-You can then execute your native executable with: `./target/demo2-1.0-SNAPSHOT-runner`
+### 3. **OrderResource** (`/api/order`)
+This resource handles order operations.
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+#### Endpoints
+- **POST /**: Creates a new order.
+  - **Input**: `OrderMongo` (JSON)
+  - **Output**: Status response (JSON)
 
-## Related Guides
+- **PUT /{id}**: Updates an existing order (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `id` (path), `OrderMongo` (JSON)
+  - **Output**: Success or error message
 
-- REST ([guide](https://quarkus.io/guides/rest)): A Jakarta REST implementation utilizing build time processing and
-  Vert.x. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on
-  it.
-- MongoDB client ([guide](https://quarkus.io/guides/mongodb)): Connect to MongoDB in either imperative or reactive style
-- REST resources for MongoDB with Panache ([guide](https://quarkus.io/guides/rest-data-panache)): Generate Jakarta REST
-  resources for your MongoDB entities and repositories
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus
-  REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- Agroal - Database connection pool ([guide](https://quarkus.io/guides/datasource)): Pool JDBC database connections (
-  included in Hibernate ORM)
+- **PUT /accept/{id}**: Accepts an order (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `id` (path)
+  - **Output**: Success or error message
 
-## Provided Code
+- **PUT /deliver/{id}**: Marks an order as delivered (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `id` (path)
+  - **Output**: Success or error message
 
-### REST
+- **DELETE /{id}**: Deletes an order.
+  - **Input**: `id` (path)
+  - **Output**: Success or error message
 
-Easily start your REST Web Services
+- **GET /**: Retrieves all orders (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie)
+  - **Output**: List of orders (JSON)
 
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+- **GET /{id}**: Retrieves an order by ID.
+  - **Input**: `id` (path)
+  - **Output**: `OrderMongo` (JSON)
+
+- **GET /user/{email}**: Retrieves orders of a user by email.
+  - **Input**: `email` (path)
+  - **Output**: List of orders (JSON)
+
+- **GET /date/{date}**: Retrieves orders for a specific date (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `date` (path)
+  - **Output**: List of orders (JSON)
+
+- **GET /date/{date}/export**: Exports orders for a specific date in Excel format (admin only).
+  - **Input**: `SESSION_COOKIE` (cookie), `date` (path)
+  - **Output**: Excel file
+

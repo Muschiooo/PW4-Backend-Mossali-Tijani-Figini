@@ -40,31 +40,8 @@ public class AuthenticationService {
 
     @Inject
     MailService mailService;
-
-    @ConfigProperty(name = "twilio.account.sid")
-    String twilioAccountSid;
-
-    @ConfigProperty(name = "twilio.auth.token")
-    String twilioAuthToken;
-
-    @ConfigProperty(name = "twilio.phone.number")
-    String twilioPhoneNumber;
-
-    private void sendVerificationSms(User user, String token) {
-        try {
-            Twilio.init(twilioAccountSid, twilioAuthToken);
-            String smsText = "Ciao " + user.getName() + ", il tuo codice di verifica per l'ordine è: " + token;
-
-            Message.creator(
-                    new PhoneNumber(user.getPhoneNumber()),
-                    new PhoneNumber(twilioPhoneNumber),
-                    smsText
-            ).create();
-            LOGGER.info("Codice di verifica inviato via SMS: " + token);
-        } catch (Exception e) {
-            LOGGER.severe("Error sending verification SMS: " + e.getMessage());
-        }
-    }
+    @Inject
+    SmsService smsService;
 
     private CreateUserResponse mapUserToResponse(User user) {
         CreateUserResponse response = new CreateUserResponse();
@@ -119,6 +96,8 @@ public class AuthenticationService {
             user.setVerificationToken(token);
 
             User createdUser = userRepository.createUser(user);
+
+            //smsService.sendVerificationSms(createdUser.getPhoneNumber(), token);
 
             String mailText = "Ciao " + createdUser.getName() + ",\n"
                     + "Benvenuto in Pasticceria C'est la Vie! Per favore, clicca sul link sottostante per verificare il tuo account.\n"

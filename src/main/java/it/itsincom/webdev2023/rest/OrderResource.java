@@ -14,8 +14,6 @@ import org.bson.types.ObjectId;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 
 @Path("/api/order")
@@ -31,13 +29,11 @@ public class OrderResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createOrder(OrderMongo order) {
-        // Use the validateDeliveryDate method from OrderMongoRepository
         Response validationResponse = orderMongoRepository.validateDeliveryDate(order);
         if (validationResponse != null) {
-            return validationResponse; // Return validation error if present
+            return validationResponse;
         }
 
-        // If all validations pass, proceed to create the order
         try {
             return orderMongoRepository.createNewOrder(order);
         } catch (Exception e) {
@@ -167,10 +163,8 @@ public class OrderResource {
             return Response.status(Response.Status.FORBIDDEN).entity("User is not authorized to perform this action").build();
         }
 
-        // Generate Excel file from orders data
         ByteArrayOutputStream outputStream = orderService.getExcel(date);
 
-        // Return the Excel file as a response
         return Response.ok(outputStream.toByteArray())
                 .header("Content-Disposition", "attachment; filename=orders_" + date + ".xlsx")
                 .build();

@@ -1,7 +1,6 @@
 package it.itsincom.webdev2023.persistence.repository;
 
 import com.mongodb.client.FindIterable;
-import com.mongodb.client.model.Sorts;
 import it.itsincom.webdev2023.persistence.model.OrderMongo;
 import it.itsincom.webdev2023.persistence.model.ProductDetail;
 import it.itsincom.webdev2023.service.OrderService;
@@ -141,16 +140,6 @@ public class OrderMongoRepository {
         return orders;
     }
 
-    public OrderMongo findLatestDeliveryDate() {
-        MongoCollection<Document> collection = getOrdersCollection();
-        Document document = collection
-                .find()
-                .sort(Sorts.descending("deliverDate"))
-                .first();
-
-        return document != null ? createOrderFromDocument(document) : null;
-    }
-
     public String dateTimeFormatter(Date date) {
         ZonedDateTime dateTime = ZonedDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd 'alle ore' HH.mm");
@@ -263,55 +252,48 @@ public class OrderMongoRepository {
     }
 
     public boolean isDeliveryDateAvailable(Date proposedDate) {
-        List<OrderMongo> orders = findAll(); // Ottenere tutti gli ordini esistenti
-
+        List<OrderMongo> orders = findAll();
         for (OrderMongo existingOrder : orders) {
             if (existingOrder.getDeliverDate().equals(proposedDate)) {
-                return false; // Data già esistente
+                return false;
             }
         }
-        return true; // Data disponibile
+        return true;
     }
 
     public Date suggestNextAvailableTime(Date proposedDate) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(proposedDate);
 
-        // Set to 14:00 as starting point if no time specified
         if (calendar.get(Calendar.HOUR_OF_DAY) < 14 || calendar.get(Calendar.HOUR_OF_DAY) >= 18) {
             calendar.set(Calendar.HOUR_OF_DAY, 14);
             calendar.set(Calendar.MINUTE, 0);
         }
 
-        // Check for availability within the allowed time range (14:00 - 18:00)
         while (!isDeliveryDateAvailable(calendar.getTime()) && calendar.get(Calendar.HOUR_OF_DAY) <= 18) {
-            calendar.add(Calendar.MINUTE, 10); // Increment by 10 minutes
+            calendar.add(Calendar.MINUTE, 10);
         }
 
-        // If we've reached or passed 18:00, set to next day's 14:00
         if (calendar.get(Calendar.HOUR_OF_DAY) > 18) {
             calendar.add(Calendar.DAY_OF_YEAR, 1);
             calendar.set(Calendar.HOUR_OF_DAY, 14);
             calendar.set(Calendar.MINUTE, 0);
         }
-
         return calendar.getTime();
     }
 
     public Response validateDeliveryDate(OrderMongo order) {
         Date currentDate = new Date();
 
-        // Check if deliverDate was provided
-        if (order.getDeliverDate() == null) {
+        if (!isDeliveryDateAvailable(order.getDeliverDate())) {
             Date suggestedDate = suggestNextAvailableTime(order.getDeliverDate());
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\":\"La data di consegna non è stata fornita. Suggerimento: "
+                    .entity("{\"error\":\"La data di consegna non è disponibile. Suggerimento: "
                             + dateTimeFormatter(suggestedDate) + "\"}")
                     .type(MediaType.APPLICATION_JSON)
                     .build();
         }
 
-        // Check if proposed delivery date is in the past
         if (order.getDeliverDate().before(currentDate)) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\":\"La data di consegna non può essere nel passato.\"}")
@@ -319,11 +301,10 @@ public class OrderMongoRepository {
                     .build();
         }
 
-        // Check if the delivery time is within allowed hours (14:00 - 18:00 inclusive)
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(order.getDeliverDate());
         int hour = calendar.get(Calendar.HOUR_OF_DAY);
-        if (hour < 14 || hour > 18) { // Modified to include 18:00 as valid
+        if (hour < 14 || hour > 18) {
             Date suggestedDate = suggestNextAvailableTime(order.getDeliverDate());
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\":\"L'orario proposto deve essere tra le 14 e le 18. Suggerimento: "
@@ -331,10 +312,8 @@ public class OrderMongoRepository {
                     .type(MediaType.APPLICATION_JSON)
                     .build();
         }
-
-        return null; // Success case
+        return null;
     }
-
 
     public Response createNewOrder(OrderMongo order) throws SQLException {
         boolean success = orderService.createOrder(order);
@@ -349,5 +328,4 @@ public class OrderMongoRepository {
                     .build();
         }
     }
-
 }
