@@ -14,6 +14,7 @@ import org.bson.types.ObjectId;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Calendar;
 import java.util.List;
 
 @Path("/api/order")
@@ -29,6 +30,14 @@ public class OrderResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response createOrder(OrderMongo order) {
+        // Create a Calendar instance and set the delivery date
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(order.getDeliverDate());
+
+        // Subtract one hour from the delivery date
+        calendar.add(Calendar.HOUR_OF_DAY, -1);
+        order.setDeliverDate(calendar.getTime());
+
         Response validationResponse = orderMongoRepository.validateDeliveryDate(order);
         if (validationResponse != null) {
             return validationResponse;
@@ -43,7 +52,6 @@ public class OrderResource {
                     .build();
         }
     }
-
 
     @PUT
     @Path("/{id}")

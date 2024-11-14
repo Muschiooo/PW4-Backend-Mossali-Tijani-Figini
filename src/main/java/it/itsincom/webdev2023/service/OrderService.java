@@ -31,7 +31,10 @@ public class OrderService {
         double totalPrice = 0.0;
 
         order.setOrderDate(new java.util.Date());
-        orderMongoRepository.isDeliveryDateAvailable(order.deliverDate);
+
+        if (!orderMongoRepository.isDeliveryDateAvailable(order.getDeliverDate())) {
+            return false;
+        }
 
         for (Map.Entry<String, ProductDetail> entry : order.getDetails().entrySet()) {
             String productId = entry.getKey();

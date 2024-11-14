@@ -302,6 +302,7 @@ public class OrderMongoRepository {
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(order.getDeliverDate());
+
         int hour = calendar.get(Calendar.HOUR_OF_DAY);
         if (hour < 14 || hour > 18) {
             Date suggestedDate = suggestNextAvailableTime(order.getDeliverDate());
@@ -311,8 +312,10 @@ public class OrderMongoRepository {
                     .type(MediaType.APPLICATION_JSON)
                     .build();
         }
+
         return null;
     }
+
 
     public Response createNewOrder(OrderMongo order) throws SQLException {
         boolean success = orderService.createOrder(order);
